@@ -1,13 +1,13 @@
 <?php
-	
+
 	namespace WpEloquent;
-	
+
 	use Illuminate\Database\ConnectionInterface;
 	use Illuminate\Database\ConnectionResolverInterface;
-	
+
 	class Resolver implements ConnectionResolverInterface {
-		
-		
+
+
 		/**
 		 * Get a database connection instance.
 		 *
@@ -16,10 +16,14 @@
 		 * @return \Illuminate\Database\ConnectionInterface
 		 */
 		public function connection( $name = NULL ): ConnectionInterface {
-			return Connection::instance();
+
+
+				return Connection::instance();
+
+
 		}
-		
-		
+
+
 		/**
 		 * Get the default connection name.
 		 *
@@ -28,7 +32,7 @@
 		public function getDefaultConnection(): string {
 			// TODO: Implement getDefaultConnection() method.
 		}
-		
+
 		/**
 		 * Set the default connection name.
 		 *
@@ -39,5 +43,5 @@
 		public function setDefaultConnection( $name ) {
 			// TODO: Implement setDefaultConnection() method.
 		}
-		
+
 	}
