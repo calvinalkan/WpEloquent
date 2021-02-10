@@ -13,6 +13,10 @@
     "illuminate/database": "^8.26.1",
     "illuminate/pagination": "^8.26.1"
   },
+  "require-dev": {
+    "symfony/finder": "^5.1.4",
+    "fakerphp/faker": "^1.9.1"
+  },
   "license": "GPL-2.0-or-later",
   "authors": [
     {
