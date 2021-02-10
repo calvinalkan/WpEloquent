@@ -11,9 +11,7 @@
   "homepage": "https://github.com/calvinalkan/wp-eloquent",
   "require": {
     "illuminate/database": "^8.26.1",
-    "illuminate/pagination": "^8.26.1"
-  },
-  "require-dev": {
+    "illuminate/pagination": "^8.26.1",
     "symfony/finder": "^5.1.4",
     "fakerphp/faker": "^1.9.1"
   },
