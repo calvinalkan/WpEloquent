@@ -1,8 +1,9 @@
 <?php
-	
+
 	namespace WpEloquent;
-	
-	
+
+
+	use Illuminate\Database\Capsule\Manager as Capsule;
 	use Illuminate\Database\ConnectionInterface;
 	use Illuminate\Database\Query\Builder;
 	use Illuminate\Database\Query\Grammars\Grammar;
@@ -10,26 +11,28 @@
 	use Illuminate\Database\Query\Expression;
 	use Illuminate\Database\QueryException;
 	use Illuminate\Support\Arr;
-	
+
 	class Connection implements ConnectionInterface
 	{
-		
+
 		public $db;
-		
+
+		protected $tablePrefix = '';
+
 		/**
 		 * Count of active transactions
 		 *
 		 * @var int
 		 */
 		public $transactionCount = 0;
-		
+
 		/**
 		 * The database connection configuration options.
 		 *
 		 * @var array
 		 */
 		protected $config = [];
-		
+
 		/**
 		 * Initializes the Database class
 		 *
@@ -38,28 +41,38 @@
 		public static function instance()
 		{
 			static $instance = false;
-			
+
 			if (!$instance) {
 				$instance = new self();
 			}
-			
+
 			return $instance;
 		}
-		
+
 		/**
 		 * [__construct description]
 		 */
 		public function __construct()
 		{
+
 			global $wpdb;
-			
+
 			$this->config = [
 				'name' => 'wp-eloquent',
 			];
-			
-			$this->db = $wpdb;
+
+			$this->tablePrefix = ($wpdb) ? $wpdb->prefix : '';
+
+			if($wpdb) {
+
+				$this->db = $wpdb;
+
+			}
+
+
+
 		}
-		
+
 		/**
 		 * Get the database connection name.
 		 *
@@ -69,8 +82,8 @@
 		{
 			return $this->getConfig('name');
 		}
-		
-		
+
+
 		/**
 		 * Begin a fluent query against a database table.
 		 *
@@ -79,17 +92,16 @@
 		 * @return \Illuminate\Database\Query\Builder
 		 */
 		public function table($table, $as = null): Builder {
-			
-			
+
 			$processor = $this->getPostProcessor();
-			
+
 			$table = $this->db->prefix . $table;
-			
+
 			$query = new Builder($this, $this->getQueryGrammar(), $processor);
-			
+
 			return $query->from($table, $as);
 		}
-		
+
 		/**
 		 * Get a new raw query expression.
 		 *
@@ -101,7 +113,7 @@
 		{
 			return new Expression($value);
 		}
-		
+
 		/**
 		 * Get a new query builder instance.
 		 *
@@ -113,7 +125,7 @@
 				$this, $this->getQueryGrammar(), $this->getPostProcessor()
 			);
 		}
-		
+
 		/**
 		 * Run a select statement and return a single result.
 		 *
@@ -127,15 +139,15 @@
 		public function selectOne($query, $bindings = [], $useReadPdo = true)
 		{
 			$query = $this->bind_params($query, $bindings);
-			
+
 			$result = $this->db->get_row($query);
-			
+
 			if ($result === false || $this->db->last_error)
 				throw new QueryException($query, $bindings, new \Exception($this->db->last_error));
-			
+
 			return $result;
 		}
-		
+
 		/**
 		 * Run a select statement against the database.
 		 *
@@ -149,15 +161,15 @@
 		public function select($query, $bindings = [], $useReadPdo = true)
 		{
 			$query = $this->bind_params($query, $bindings);
-			
+
 			$result = $this->db->get_results($query);
-			
+
 			if ($result === false || $this->db->last_error)
 				throw new QueryException($query, $bindings, new \Exception($this->db->last_error));
-			
+
 			return $result;
 		}
-		
+
 		/**
 		 * Run a select statement against the database and returns a generator.
 		 * TODO: Implement cursor and all the related sub-methods.
@@ -169,9 +181,9 @@
 		 */
 		public function cursor($query, $bindings = [], $useReadPdo = true)
 		{
-		
+
 		}
-		
+
 		/**
 		 * A hacky way to emulate bind parameters into SQL query
 		 *
@@ -182,30 +194,30 @@
 		 */
 		private function bind_params($query, $bindings, $update = false)
 		{
-			
+
 			$query = str_replace('"', '`', $query);
 			$bindings = $this->prepareBindings($bindings);
-			
+
 			if (!$bindings) {
 				return $query;
 			}
-			
+
 			$bindings = array_map(function ($replace) {
 				if (is_string($replace)) {
 					$replace = "'" . esc_sql($replace) . "'";
 				} elseif ($replace === null) {
 					$replace = "null";
 				}
-				
+
 				return $replace;
 			}, $bindings);
-			
+
 			$query = str_replace(array('%', '?'), array('%%', '%s'), $query);
 			$query = vsprintf($query, $bindings);
-			
+
 			return $query;
 		}
-		
+
 		/**
 		 * Bind and run the query
 		 *
@@ -218,15 +230,15 @@
 		public function bind_and_run($query, $bindings = array())
 		{
 			$new_query = $this->bind_params($query, $bindings);
-			
+
 			$result = $this->db->query($new_query);
-			
+
 			if ($result === false || $this->db->last_error)
 				throw new QueryException($new_query, $bindings, new \Exception($this->db->last_error));
-			
+
 			return (array) $result;
 		}
-		
+
 		/**
 		 * Run an insert statement against the database.
 		 *
@@ -239,7 +251,7 @@
 		{
 			return $this->statement($query, $bindings);
 		}
-		
+
 		/**
 		 * Run an update statement against the database.
 		 *
@@ -252,7 +264,7 @@
 		{
 			return $this->affectingStatement($query, $bindings);
 		}
-		
+
 		/**
 		 * Run a delete statement against the database.
 		 *
@@ -265,7 +277,7 @@
 		{
 			return $this->affectingStatement($query, $bindings);
 		}
-		
+
 		/**
 		 * Execute an SQL statement and return the boolean result.
 		 *
@@ -277,10 +289,10 @@
 		public function statement($query, $bindings = array())
 		{
 			$new_query = $this->bind_params($query, $bindings, true);
-			
+
 			return $this->unprepared($new_query);
 		}
-		
+
 		/**
 		 * Run an SQL statement and get the number of rows affected.
 		 *
@@ -292,15 +304,15 @@
 		public function affectingStatement($query, $bindings = array())
 		{
 			$new_query = $this->bind_params($query, $bindings, true);
-			
+
 			$result = $this->db->query($new_query);
-			
+
 			if ($result === false || $this->db->last_error)
 				throw new QueryException($new_query, $bindings, new \Exception($this->db->last_error));
-			
+
 			return intval($result);
 		}
-		
+
 		/**
 		 * Run a raw, unprepared query against the PDO connection.
 		 *
@@ -310,12 +322,12 @@
 		 */
 		public function unprepared($query)
 		{
-			
+
 			$result = $this->db->query($query);
-			
+
 			return ($result === false || $this->db->last_error);
 		}
-		
+
 		/**
 		 * Prepare the query bindings for execution.
 		 *
@@ -326,9 +338,9 @@
 		public function prepareBindings(array $bindings)
 		{
 			$grammar = $this->getQueryGrammar();
-			
+
 			foreach ($bindings as $key => $value) {
-				
+
 				// Micro-optimization: check for scalar values before instances
 				if (is_bool($value)) {
 					$bindings[$key] = intval($value);
@@ -341,10 +353,10 @@
 					$bindings[$key] = $value->format($grammar->getDateFormat());
 				}
 			}
-			
+
 			return $bindings;
 		}
-		
+
 		/**
 		 * Execute a Closure within a transaction.
 		 *
@@ -367,7 +379,7 @@
 				throw $e;
 			}
 		}
-		
+
 		/**
 		 * Start a new database transaction.
 		 *
@@ -380,7 +392,7 @@
 				$this->transactionCount++;
 			}
 		}
-		
+
 		/**
 		 * Commit the active database transaction.
 		 *
@@ -396,7 +408,7 @@
 				$this->transactionCount--;
 			}
 		}
-		
+
 		/**
 		 * Rollback the active database transaction.
 		 *
@@ -412,7 +424,7 @@
 				$this->transactionCount--;
 			}
 		}
-		
+
 		/**
 		 * Get the number of active transactions.
 		 *
@@ -422,7 +434,7 @@
 		{
 			return $this->transactionCount;
 		}
-		
+
 		/**
 		 * Execute the given callback in "dry run" mode.
 		 *
@@ -434,17 +446,17 @@
 		{
 			// TODO: Implement pretend() method.
 		}
-		
+
 		public function getPostProcessor()
 		{
 			return new Processor();
 		}
-		
+
 		public function getQueryGrammar()
 		{
 			return new Grammar();
 		}
-		
+
 		/**
 		 * Return self as PDO
 		 *
@@ -453,7 +465,7 @@
 		public function getPdo(): Connection {
 			return $this;
 		}
-		
+
 		/**
 		 * Return the last insert id
 		 *
@@ -465,7 +477,7 @@
 		{
 			return $this->db->insert_id;
 		}
-		
+
 		/**
 		 * Get an option from the configuration options.
 		 *
@@ -476,12 +488,23 @@
 		{
 			return Arr::get($this->config, $option);
 		}
-		
+
 		/**
 		 * @return string
 		 */
 		public function getDatabaseName() {
 			return $this->getConfig('name');
 		}
-		
+
+
+		/**
+		 * Get the table prefix for the connection.
+		 *
+		 * @return string
+		 */
+		public function getTablePrefix()
+		{
+			return $this->tablePrefix;
+		}
+
 	}
