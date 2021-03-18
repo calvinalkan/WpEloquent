@@ -2,13 +2,13 @@
 	
 	namespace WpEloquent;
 	
-	use Illuminate\Database\Eloquent\Model;
+	use Illuminate\Database\Eloquent\Model as EloquentModel;
 	
 	class WpEloquent {
 		
 		public static function boot() {
 			
-			Model::setConnectionResolver( new Resolver() );
+			EloquentModel::setConnectionResolver( new Resolver() );
 			
 		}
 		

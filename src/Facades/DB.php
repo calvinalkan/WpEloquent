@@ -7,16 +7,15 @@
 	use WpEloquent\Connection;
 	
 	/**
+	 *
+	 * Allow calling the QueryBuilder statically.
+	 *
 	 * @see \Illuminate\Database\DatabaseManager
 	 * @see \Illuminate\Database\Connection
 	 */
 	class DB extends Facade
 	{
-		/**
-		 * Get the registered name of the component.
-		 *
-		 * @return string
-		 */
+		
 		protected static function getFacadeAccessor()
 		{
 			return Connection::instance();
