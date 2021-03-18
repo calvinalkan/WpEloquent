@@ -3,14 +3,16 @@
 	namespace WpEloquent;
 	
 	
-	use Illuminate\Database\Eloquent\Factories\Factory;
+	use Faker\Generator;
+	use Illuminate\Database\Eloquent\Factories\Factory as EloquentFactory;
+	use Faker\Factory;
 	
 	
-	abstract class ModelFactory extends Factory {
+	abstract class ModelFactory extends EloquentFactory {
 		
-		protected function withFaker(): \Faker\Generator {
+		protected function withFaker(): Generator {
 			
-			return \Faker\Factory::create();
-	}
-	
+			return Factory::create();
+		}
+		
 	}
