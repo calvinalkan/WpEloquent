@@ -4,6 +4,8 @@
     namespace Tests\wpunit;
 
 
+
+    use Codeception\Test\Unit;
     use Codeception\TestCase\WPTestCase;
     use Illuminate\Database\Eloquent\Model;
     use WpEloquent\Resolver;
@@ -11,10 +13,10 @@
     class EloquentIntegrationTest extends WPTestCase {
 
 
-        public function _setUp()
+        protected function setUp() :void
         {
 
-            parent::_setUp();
+            parent::setUp();
 
             global $wpdb;
 
@@ -28,6 +30,9 @@
 
             $users = User::first();
             $foo = 'bar';
+
+
+
 
 
         }
