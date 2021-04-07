@@ -4,7 +4,7 @@
 	
 	
 	use Illuminate\Support\Facades\Facade;
-	use WpEloquent\Connection;
+	use WpEloquent\WordpressConnection;
 	
 	/**
 	 *
@@ -18,6 +18,6 @@
 		
 		protected static function getFacadeAccessor()
 		{
-			return Connection::instance();
+			return WordpressConnection::instance();
 		}
 	}

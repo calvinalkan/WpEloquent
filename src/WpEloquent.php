@@ -7,9 +7,14 @@
 	class WpEloquent {
 		
 		public static function boot() {
-			
-			EloquentModel::setConnectionResolver( new Resolver() );
-			
+
+		    global $wpdb;
+
+		    $resolver = new Resolver( clone $wpdb );
+
+			EloquentModel::setConnectionResolver( $resolver );
+
+
 		}
 		
 	}
