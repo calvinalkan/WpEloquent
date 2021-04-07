@@ -14,6 +14,7 @@
     use Illuminate\Database\Schema\MySqlBuilder as MySqlSchemaBuilder;
     use Illuminate\Support\Arr;
     use wpdb;
+    use WpEloquent\Traits\DetectsConcurrencyErrors;
 
     class WpConnection implements ConnectionInterface
     {
