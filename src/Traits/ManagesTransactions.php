@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace WpEloquent;
+    namespace WpEloquent\Traits;
 
     use Closure;
     use Throwable;

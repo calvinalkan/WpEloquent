@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace WpEloquent;
+    namespace WpEloquent\Traits;
 
     use Illuminate\Database\QueryException;
     use Exception;

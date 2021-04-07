@@ -15,6 +15,9 @@
     use Illuminate\Support\Arr;
     use wpdb;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
+    use WpEloquent\Traits\InteractsWithWpDb;
+    use WpEloquent\Traits\LogsQueries;
+    use WpEloquent\Traits\ManagesTransactions;
 
     class WpConnection implements ConnectionInterface
     {
@@ -124,7 +127,7 @@
             // type commands are run such as checking whether a table exists.
             $this->db_name = $db_name;
 
-            $this->table_prefix = $table_prefix ?? $wpdb->prefix;
+            $this->table_prefix = ( empty($table_prefix)) ? $wpdb->prefix : $table_prefix;
 
             $this->config = $config;
 
@@ -138,7 +141,7 @@
         }
 
 
-        public static function instance(wpdb $wpdb, $db_name = '', $table_prefix = '', $config = [])
+        public static function instance( wpdb $wpdb, $db_name = '', $table_prefix = '', $config = [])
         {
 
             static $instance = false;
@@ -708,5 +711,10 @@
 
         }
 
+        public function getName() {
+
+            return $this->getDatabaseName();
+
+        }
 
     }

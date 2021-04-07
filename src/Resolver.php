@@ -24,7 +24,7 @@
         public function __construct ( wpdb $wpdb )
         {
 
-            $this->wpdb = $wpdb;
+            $this->wpdb =  $wpdb;
 
         }
 
@@ -38,7 +38,7 @@
         public function connection ( $name = NULL ) : ConnectionInterface
         {
 
-            return WpConnection::instance( $this->wpdb );
+            return WpConnection::instance( $this->wpdb, $this->connection_name );
 
         }
 
