@@ -367,6 +367,8 @@
         }
 
 
+
+
         /**
          * Here we escape any string values that might be passed from the query.
          * !important. esc_sql can only be used for values that are places inside backticks.
@@ -377,14 +379,16 @@
          *
          * @return string|null
          */
-        private function sanitizeSql($statement) : ?string
+        private function sanitizeSql($statement ) : ?string
         {
 
-            if (is_string($statement)) {
+            if (is_string($statement)  ) {
 
                 $statement = "'".esc_sql($statement)."'";
 
             }
+
+
 
             return $statement ?? null;
 

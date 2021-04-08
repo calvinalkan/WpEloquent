@@ -15,4 +15,28 @@
 
         }
 
+
+        public function compileGetColumnsByOrdinalPosition () : string
+        {
+
+            return "select column_name FROM information_schema.columns where table_name = ? order by ordinal_position";
+
+        }
+
+
+        public function compileGetTableCollation() : string
+        {
+
+            return "show table status where name like ?";
+
+        }
+
+        public function compileGetFullColumnInfo() : string
+        {
+
+            return "show full columns from ?";
+
+        }
+
+
     }

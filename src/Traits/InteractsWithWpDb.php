@@ -80,6 +80,32 @@
         }
 
 
+        public function runWpDbUnprepared (  $sql_query , Closure $callback) {
+
+
+            // To execute the statement, we'll simply call the callback, which will actually
+            // run the SQL against the wpdb class .
+            try {
+
+
+                $start = microtime(true);
+
+                $result = $callback($sql_query);
+
+                $this->logQuery($sql_query , [] , $this->getElapsedTime($start));
+
+                return $result;
+
+            } catch (Exception $e) {
+
+                $this->throwQueryException($sql_query, [] , $e);
+
+            }
+
+
+        }
+
+
         /**
          * This functions just wraps the unprepared method() so that the api is not confusing.
          * For every interface method that requires a boolean return value we need to use this
