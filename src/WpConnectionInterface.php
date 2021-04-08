@@ -7,7 +7,6 @@
     use Illuminate\Database\Query\Builder as QueryBuilder;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
-    use Illuminate\Database\Schema\Grammars\MySqlGrammar as MySqlSchemaGrammar;
     use Illuminate\Support\Arr;
 
     interface WpConnectionInterface extends ConnectionInterface
@@ -41,7 +40,7 @@
         /**
          * Get the schema grammar used by the connection.
          *
-         * @return MySqlSchemaGrammar
+         * @return  MySqlSchemaGrammar
          */
         public function getSchemaGrammar() : MySqlSchemaGrammar;
 

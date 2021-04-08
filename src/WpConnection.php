@@ -4,13 +4,13 @@
     namespace WpEloquent;
 
     use Closure;
-    use Illuminate\Database\ConnectionInterface;
+    use DateTime;
+    use Generator;
     use Illuminate\Database\Grammar;
     use Illuminate\Database\Query\Builder as QueryBuilder;
     use Illuminate\Database\Query\Expression;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
-    use Illuminate\Database\Schema\Grammars\MySqlGrammar as MySqlSchemaGrammar;
     use Illuminate\Support\Arr;
     use wpdb;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
@@ -110,8 +110,6 @@
          * Create a new database connection instance.
          *
          * @param  wpdb  $wpdb
-         * @param  string  $db_name
-         * @param  string  $table_prefix
          */
         public function __construct(wpdb $wpdb)
         {
@@ -134,7 +132,6 @@
 
             $this->useDefaultSchemaGrammar();
         }
-
 
 
         /*
@@ -276,14 +273,14 @@
         protected function getDefaultSchemaGrammar() : Grammar
         {
 
-            return $this->withTablePrefix(new MySqlSchemaGrammar);
+            return $this->withTablePrefix( new MySqlSchemaGrammar());
         }
 
 
         /**
          * Get a schema builder instance for the connection.
          *
-         * @return
+         * @return MySqlSchemaBuilder
          */
         public function getSchemaBuilder() : MySqlSchemaBuilder
         {
@@ -350,7 +347,7 @@
          *
          * @return mixed
          */
-        private function prepareQuery($query, $bindings)
+        public function prepareQuery($query, $bindings)
         {
 
             $query = str_replace('"', '`', $query);
@@ -413,7 +410,7 @@
                 elseif (is_scalar($value)) {
                     continue;
                 }
-                elseif ($value instanceof \DateTime) {
+                elseif ($value instanceof DateTime) {
 
                     // We need to transform all instances of the DateTime class into an actual
                     // date string. Each query grammar maintains its own date string format
@@ -427,6 +424,8 @@
             return $bindings;
 
         }
+
+
 
 
         /*
@@ -519,7 +518,7 @@
                     return [];
                 }
 
-                $result = $this->wpdb->get_results($sql_query, ARRAY_N);
+                $result = $this->wpdb->get_results($sql_query, ARRAY_A);
 
                 return ($this->wasSuccessful($result)) ? $result : [];
 
@@ -529,7 +528,7 @@
 
         }
 
-        public function selectFromWriteConnection($query, $bindings = [])
+        public function selectFromWriteConnection($query, $bindings = []) : array
         {
             return $this->select($query, $bindings, FALSE );
         }
@@ -648,13 +647,14 @@
          * @param  array  $bindings
          * @param  bool  $useReadPdo
          *
-         * @return \Generator
+         * @return Generator
          */
         public function cursor($query, $bindings = [], $useReadPdo = true)
         {
 
             // For now just use this do not cause errors.
-            return $this->select($query, $bindings);
+           return $this->select($query, $bindings);
+
 
 
         }
@@ -695,7 +695,7 @@
          *
          * @return string
          */
-        public function getDatabaseName()
+        public function getDatabaseName() : string
         {
 
             return $this->db_name;

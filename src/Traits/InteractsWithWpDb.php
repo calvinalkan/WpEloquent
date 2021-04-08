@@ -27,6 +27,20 @@
         */
 
         /**
+         *
+         * Returns the used instance of wpdb
+         *
+         * @return \wpdb
+         */
+        public function getWpDB() : \wpdb
+        {
+
+            return $this->wpdb;
+
+        }
+
+
+        /**
          * Run a SQL statement through the wpdb class.
          *
          * @param  string  $query
@@ -36,7 +50,7 @@
          * @return mixed
          * @throws QueryException
          */
-        private function runWpDB(string $query, array $bindings, Closure $callback)
+        public function runWpDB(string $query, array $bindings, Closure $callback)
         {
 
             // To execute the statement, we'll simply call the callback, which will actually
@@ -44,7 +58,6 @@
             try {
 
 
-                $bindings = $this->prepareBindings($bindings);
                 $sql_query = $this->prepareQuery($query, $bindings);
 
                 $start = microtime(true);
@@ -142,5 +155,7 @@
 
             return  $result && empty($this->wpdb->last_error);
         }
+
+
 
     }
