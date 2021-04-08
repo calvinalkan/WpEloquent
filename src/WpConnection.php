@@ -11,7 +11,6 @@
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
     use Illuminate\Database\Schema\Grammars\MySqlGrammar as MySqlSchemaGrammar;
-    use Illuminate\Database\Schema\MySqlBuilder as MySqlSchemaBuilder;
     use Illuminate\Support\Arr;
     use wpdb;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
@@ -19,7 +18,7 @@
     use WpEloquent\Traits\LogsQueries;
     use WpEloquent\Traits\ManagesTransactions;
 
-    class WpConnection implements ConnectionInterface
+    class WpConnection implements WpConnectionInterface
     {
 
         use InteractsWithWpDb;
@@ -110,14 +109,11 @@
         /**
          * Create a new database connection instance.
          *
-         * @param  wpdb  $pdo
+         * @param  wpdb  $wpdb
          * @param  string  $db_name
          * @param  string  $table_prefix
-         * @param  array  $config
-         *
-         * @return void
          */
-        public function __construct(wpdb $wpdb, $db_name = '', $table_prefix = '', $config = [])
+        public function __construct(wpdb $wpdb)
         {
 
             $this->wpdb = $wpdb;
@@ -125,11 +121,9 @@
             // First we will setup the default properties. We keep track of the DB
             // name we are connected to since it is needed when some reflective
             // type commands are run such as checking whether a table exists.
-            $this->db_name = $db_name;
+            $this->db_name = DB_NAME ?? '';
 
             $this->table_prefix = ( empty($table_prefix)) ? $wpdb->prefix : $table_prefix;
-
-            $this->config = $config;
 
             // We need to initialize a query grammar and the query post processors
             // which are both very important parts of the database abstractions
@@ -138,22 +132,9 @@
 
             $this->useDefaultPostProcessor();
 
+            $this->useDefaultSchemaGrammar();
         }
 
-
-        public static function instance( wpdb $wpdb, $db_name = '', $table_prefix = '', $config = [])
-        {
-
-            static $instance = false;
-
-            if ( ! $instance) {
-
-                $instance = new self($wpdb, $db_name, $table_prefix, $config);
-            }
-
-            return $instance;
-
-        }
 
 
         /*
@@ -177,7 +158,7 @@
          *
          * @return void
          */
-        public function useDefaultQueryGrammar()
+        private function useDefaultQueryGrammar()
         {
 
             $this->query_grammar = $this->getDefaultQueryGrammar();
@@ -189,12 +170,13 @@
          *
          * @return Grammar|MySqlQueryGrammar
          */
-        protected function getDefaultQueryGrammar() : Grammar
+        private function getDefaultQueryGrammar() : Grammar
         {
 
-            return $this->withTablePrefix(new MySqlQueryGrammar);
+            return $this->withTablePrefix( new MySqlQueryGrammar );
 
         }
+
 
         /**
          * Get the query grammar used by the connection.
@@ -228,7 +210,7 @@
          *
          * @return void
          */
-        public function useDefaultPostProcessor()
+        private function useDefaultPostProcessor()
         {
 
             $this->post_processor = $this->getDefaultPostProcessor();
@@ -240,7 +222,7 @@
          *
          * @return MySqlProcessor
          */
-        protected function getDefaultPostProcessor() : MySqlProcessor
+        private function getDefaultPostProcessor() : MySqlProcessor
         {
 
             return new MySqlProcessor;
@@ -334,7 +316,7 @@
          *
          * @return Grammar
          */
-        public function withTablePrefix(Grammar $grammar) : Grammar
+        private function withTablePrefix(Grammar $grammar) : Grammar
         {
 
             $grammar->setTablePrefix($this->table_prefix);
@@ -422,8 +404,6 @@
         public function prepareBindings(array $bindings) : array
         {
 
-            $grammar = $this->getQueryGrammar();
-
             foreach ($bindings as $key => $value) {
 
                 // Micro-optimization: check for scalar values before instances
@@ -434,12 +414,15 @@
                     continue;
                 }
                 elseif ($value instanceof \DateTime) {
+
                     // We need to transform all instances of the DateTime class into an actual
                     // date string. Each query grammar maintains its own date string format
                     // so we'll just ask the grammar for the format to get from the date.
-                    $bindings[$key] = $value->format($grammar->getDateFormat());
+                    $bindings[$key] = $value->format( $this->getQueryGrammar()->getDateFormat() );
+
                 }
             }
+
 
             return $bindings;
 
@@ -536,11 +519,19 @@
                     return [];
                 }
 
-                return $this->wpdb->get_results($sql_query);
+                $result = $this->wpdb->get_results($sql_query, ARRAY_N);
+
+                return ($this->wasSuccessful($result)) ? $result : [];
+
 
             }
             );
 
+        }
+
+        public function selectFromWriteConnection($query, $bindings = [])
+        {
+            return $this->select($query, $bindings, FALSE );
         }
 
 
@@ -674,7 +665,7 @@
         |
         |
         |--------------------------------------------------------------------------
-        | Helper functions
+        | MISC getters and setters
         |--------------------------------------------------------------------------
         |
         |
@@ -707,13 +698,27 @@
         public function getDatabaseName()
         {
 
-            return $this->getConfig('name');
+            return $this->db_name;
 
         }
 
-        public function getName() {
+        /**
+         * Returns the name of the database connection.
+         *
+         * Redundant but required for Eloquent.
+         *
+         * @return string
+         */
+        public function getName() :string {
 
             return $this->getDatabaseName();
+
+        }
+
+        public function getTablePrefix() : string
+        {
+
+            return $this->table_prefix;
 
         }
 

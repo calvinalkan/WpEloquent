@@ -185,7 +185,7 @@
          * @return void
          * @throws Throwable
          */
-        protected function handleRollBackException(Throwable $e)
+        private function handleRollBackException(Throwable $e)
         {
 
             if ($this->wpdb->check_connection()) {
@@ -304,28 +304,13 @@
          *
          * @return int
          */
-        public function transactionLevel()
+        public function transactionLevel() : int
         {
 
             return $this->transaction_count;
         }
 
-        /**
-         * Execute the callback after a transaction commits.
-         *
-         * @param  callable  $callback
-         *
-         * @return void
-         */
-        public function afterCommit($callback)
-        {
 
-            if ($this->transaction_countManager) {
-                return $this->transaction_countManager->addCallback($callback);
-            }
-
-            throw new RuntimeException('Transactions Manager has not been set.');
-        }
 
 
         /**

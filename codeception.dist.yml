@@ -18,3 +18,5 @@ extensions:
         - Codeception\Command\GenerateWPXMLRPC
 params:
     - .env.testing
+coverage:
+    enabled: true

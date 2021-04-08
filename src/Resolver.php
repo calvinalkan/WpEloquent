@@ -19,12 +19,22 @@
          */
         private $wpdb;
 
-        private $connection_name = 'wp-eloquent';
+        /**
+         * @var mixed|string
+         */
+        private $connection_name;
 
-        public function __construct ( wpdb $wpdb )
+        /**
+         * @var mixed|string
+         */
+        private $table_prefix;
+
+        public function __construct ( wpdb $wpdb, $db_name = 'wp-eloquent', $table_prefix = '' )
         {
 
             $this->wpdb =  $wpdb;
+            $this->connection_name = $db_name;
+            $this->table_prefix = $table_prefix;
 
         }
 
@@ -38,7 +48,20 @@
         public function connection ( $name = NULL ) : ConnectionInterface
         {
 
-            return WpConnection::instance( $this->wpdb, $this->connection_name );
+            static $instance = false;
+
+            if ( ! $instance ) {
+
+                $instance = new WpConnection(
+                    $this->wpdb,
+                    $this->connection_name,
+                    $this->table_prefix
+                );
+
+            }
+
+            return $instance;
+
 
         }
 

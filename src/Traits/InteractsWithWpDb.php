@@ -51,14 +51,6 @@
 
                 $result = $callback($sql_query);
 
-                if ( ! $result || $this->wpdb->last_error) {
-
-                    $this->throwQueryException(
-                        $sql_query, $bindings, new Exception($this->wpdb->last_error)
-                    );
-
-                }
-
                 // Once we have run the query we will calculate the time that it took to run and
                 // then log the query, bindings, and execution time so we will report them on
                 // the event that the developer needs them. We'll log time in milliseconds.
@@ -128,7 +120,6 @@
 
             return is_int($result) ? true : $result;
 
-
         }
 
 
@@ -139,6 +130,17 @@
                 $query, $bindings, $e
             );
 
+        }
+
+        /**
+         * @param $result
+         *
+         * @return bool
+         */
+        private function wasSuccessful($result) : bool
+        {
+
+            return  $result && empty($this->wpdb->last_error);
         }
 
     }

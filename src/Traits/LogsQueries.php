@@ -79,6 +79,7 @@
             $this->logging_queries = $loggingQueries;
 
             return $result;
+
         }
 
 
