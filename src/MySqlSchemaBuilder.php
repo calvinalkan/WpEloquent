@@ -5,11 +5,24 @@
 
     use Illuminate\Database\Schema\MySqlBuilder;
     use Illuminate\Support\Str;
+    use Closure;
 
     class MySqlSchemaBuilder extends MySqlBuilder
     {
 
 
+        /**
+         *
+         * Alias for the table method.
+         *
+         * @param  string  $table
+         * @param  Closure  $closure
+         */
+        public function modify (string $table , Closure $closure) {
+
+            $this->table($table, $closure);
+
+        }
 
 
         public function getAllTables() : array

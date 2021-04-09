@@ -7,17 +7,21 @@
     use Illuminate\Database\Query\Expression;
     use Illuminate\Database\Schema\Blueprint;
     use Illuminate\Database\Schema\Builder;
-    use Illuminate\Support\Carbon;
     use Illuminate\Support\Str;
-    use PHPUnit\Framework\TestBuilder;
     use WpEloquent\MySqlSchemaBuilder;
     use WpEloquent\WpConnection;
 
+    use function PHPUnit\Framework\assertEmpty;
     use function PHPUnit\Framework\assertFalse;
     use function PHPUnit\Framework\assertSame;
-    use function PHPUnit\Framework\assertThat;
     use function PHPUnit\Framework\assertTrue;
 
+    /**
+     * Class SchemaBuilderTest
+     *
+     * @todo Check that timezone functionality works.
+     *
+     */
     class SchemaBuilderTest extends WPTestCase
     {
 
@@ -101,7 +105,7 @@
 
             assertFalse($schema_builder->hasColumn('test_users', 'phone'));
 
-            $schema_builder->table('test_users', function (Blueprint $table) {
+            $schema_builder->modify('test_users', function (Blueprint $table) {
 
                 $table->string('phone');
 
@@ -168,6 +172,30 @@
             assertFalse($builder->hasColumn('test_users', 'email'));
             assertFalse($builder->hasColumn('test_users', 'id'));
 
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('name');
+                $table->string('email');
+                $table->string('phone');
+
+            });
+
+            assertTrue($builder->hasColumn('table1', 'name'));
+            assertTrue($builder->hasColumn('table1', 'email'));
+            assertTrue($builder->hasColumn('table1', 'phone'));
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+
+                $table->dropColumn(['email', 'phone']);
+                $table->dropColumn('name');
+
+            });
+
+            assertFalse($builder->hasColumn('table1', 'name'));
+            assertFalse($builder->hasColumn('table1', 'email'));
+            assertFalse($builder->hasColumn('table1', 'phone'));
 
         }
 
@@ -217,25 +245,27 @@
 
         }
 
-       /** @test */
-       public function the_column_type_can_be_found_for_the_last_query ()
-       {
+        /** @test */
+        public function the_column_type_can_be_found_for_the_last_query()
+        {
 
-           $builder = $this->newTestBuilder();
+            $builder = $this->newTestBuilder();
 
-           $builder->create('table1', function (Blueprint $table) {
+            $builder->create('table1', function (Blueprint $table) {
 
-               $table->id();
-               $table->string('email');
+                $table->id();
+                $table->string('email');
 
-           });
+            });
 
-           assertSame('varchar(255)',$builder->getColumnType('table1', 'email'));
+            assertSame('varchar(255)', $builder->getColumnType('table1', 'email'));
 
-       }
+        }
 
 
         /**
+         *
+         *
          *
          *
          *
@@ -248,9 +278,11 @@
          *
          *
          *
+         *
          */
+
         /** @test */
-        public function big_increments_works ()
+        public function big_increments_works()
         {
 
 
@@ -258,199 +290,1098 @@
 
             $builder->create('table1', function (Blueprint $table) {
 
-               $table->bigIncrements('id');
+                $table->bigIncrements('id');
 
             });
 
-            $builder->seeColumnOfType( 'id', 'bigint unsigned');
+            $builder->seeColumnOfType('id', 'bigint unsigned');
+
+            $builder->seePrimaryKey('id');
+
+        }
+
+
+        /** @test */
+        public function big_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->bigInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'bigint');
 
 
         }
 
 
-        // /** @test */
-        // public function all_column_types_can_be_created()
-        // {
-        //
-        //     $builder = $this->newTestBuilder();
-        //
-        //     $builder->create('table1', function (Blueprint $table) {
-        //
-        //         $table->bigIncrements('id_big');
-        //         $table->bigInteger('votes');
-        //         $table->binary('photo');
-        //         $table->boolean('confirmed');
-        //         $table->char('name', 100);
-        //         $table->dateTimeTz('created_at_tz', $precision = 0);
-        //         $table->dateTime('created_at', $precision = 0);
-        //         $table->date('date');
-        //         $table->decimal('amount_decimal', $precision = 8, $scale = 2);
-        //         $table->double('amount_double', 8, 2);
-        //         $table->enum('difficulty', ['easy', 'hard']);
-        //         $table->float('amount_float', 8, 2);
-        //         $table->foreignId('user_id');
-        //         $table->geometryCollection('geometrycollection');
-        //         $table->geometry('geometry');
-        //
-        //     });
-        //
-        //     $builder->seeColumnOfType('table1', 'id_big', 'bigint');
-        //     $builder->seeColumnOfType('table1', 'votes', 'bigint');
-        //     $builder->seeColumnOfType('table1', 'photo', 'blob');
-        //     $builder->seeColumnOfType('table1', 'confirmed', 'tinyint');
-        //     $builder->seeColumnOfType('table1', 'name', 'char');
-        //     $builder->seeColumnOfType('table1', 'created_at_tz', 'datetime');
-        //     $builder->seeColumnOfType('table1', 'created_at', 'datetime');
-        //     $builder->seeColumnOfType('table1', 'date', 'date');
-        //     $builder->seeColumnOfType('table1', 'amount_decimal', 'decimal');
-        //     $builder->seeColumnOfType('table1', 'amount_double', 'double');
-        //
-        //     // double is expected here. @see: https://github.com/laravel/framework/issues/18776
-        //     $builder->seeColumnOfType('table1', 'amount_float', 'double');
-        //     $builder->seeColumnOfType('table1', 'difficulty', 'enum');
-        //     $builder->seeColumnOfType('table1', 'user_id', 'bigint');
-        //     $builder->seeColumnOfType('table1', 'geometrycollection', 'geomcollection');
-        //     $builder->seeColumnOfType('table1', 'geometry', 'geometry');
-        //
-        //     $builder->create('table2', function (Blueprint $table) {
-        //
-        //         $table->id('primary');
-        //         $table->integer('votes');
-        //         $table->ipAddress('visitor');
-        //         $table->json('json');
-        //         $table->jsonb('jsonb');
-        //         $table->lineString('positions');
-        //         $table->longText('description');
-        //         $table->macAddress('device');
-        //     });
-        //
-        //     $builder->seeColumnOfType('table2', 'primary', 'bigint');
-        //     $builder->seeColumnOfType('table2', 'votes', 'int');
-        //     $builder->seeColumnOfType('table2', 'visitor', 'varchar');
-        //     $builder->seeColumnOfType('table2', 'json', 'json');
-        //
-        //     //expected type is json for jsonb,
-        //     $builder->seeColumnOfType('table2', 'jsonb', 'json');
-        //     $builder->seeColumnOfType('table2', 'positions', 'linestring');
-        //     $builder->seeColumnOfType('table2', 'description', 'longtext');
-        //     $builder->seeColumnOfType('table2', 'device', 'varchar');
-        //
-        //     $builder->create('table3', function (Blueprint $table) {
-        //
-        //         $table->increments('id');
-        //         $table->nullableMorphs('taggable');
-        //         $table->nullableUuidMorphs('likeable');
-        //         $table->point('position');
-        //         $table->polygon('polygon');
-        //         $table->rememberToken();
-        //         $table->set('flavors', ['strawberry', 'vanilla']);
-        //     });
-        //
-        //     $builder->seeColumnOfType('table3', 'id', 'int');
-        //     $builder->seeColumnOfType('table3', 'taggable_id', 'bigint');
-        //     $builder->seeColumnOfType('table3', 'taggable_type', 'varchar');
-        //     $builder->seeColumnOfType('table3', 'likeable_id', 'char');
-        //     $builder->seeColumnOfType('table3', 'likeable_type', 'varchar');
-        //     $builder->seeColumnOfType('table3', 'position', 'point');
-        //     $builder->seeColumnOfType('table3', 'polygon', 'polygon');
-        //     $builder->seeColumnOfType('table3', 'remember_token', 'varchar');
-        //     $builder->seeColumnOfType('table3', 'flavors', 'set');
-        //
-        //     $builder->create('table4', function (Blueprint $table) {
-        //
-        //         $table->mediumIncrements('id');
-        //         $table->mediumInteger('votes');
-        //         $table->mediumText('description');
-        //         $table->morphs('taggable');
-        //         $table->multiLineString('multiLineString');
-        //         $table->multiPoint('multiPoint');
-        //         $table->multiPolygon('multiPolygon');
-        //         $table->nullableTimestamps(0);
-        //     });
-        //
-        //     $builder->seeColumnOfType('table4', 'id', 'mediumint');
-        //     $builder->seeColumnOfType('table4', 'votes', 'mediumint');
-        //     $builder->seeColumnOfType('table4', 'description', 'mediumtext');
-        //     $builder->seeColumnOfType('table4', 'taggable_id', 'bigint');
-        //     $builder->seeColumnOfType('table4', 'taggable_type', 'varchar');
-        //     $builder->seeColumnOfType('table4', 'multiLineString', 'multilinestring');
-        //     $builder->seeColumnOfType('table4', 'multiPoint', 'multipoint');
-        //     $builder->seeColumnOfType('table4', 'multiPolygon', 'multipolygon');
-        //     $builder->seeColumnOfType('table4', 'created_at', 'timestamp');
-        //     $builder->seeColumnOfType('table4', 'updated_at', 'timestamp');
-        //
-        //     $builder->create('table5', function (Blueprint $table) {
-        //
-        //
-        //         $table->smallIncrements('id');
-        //         $table->smallInteger('votes');
-        //         $table->softDeletesTz($column = 'deleted_at_tz', $precision = 0);
-        //         $table->softDeletes($column = 'deleted_at', $precision = 0);
-        //         $table->string('name', 100);
-        //         $table->text('description');
-        //         $table->timeTz('sunrise_tz', $precision = 0);
-        //         $table->time('sunrise', $precision = 0);
-        //         $table->timestampTz('added_at_tz', $precision = 0);
-        //         $table->timestamp('added_at', $precision = 0);
-        //         $table->timestampsTz($precision = 0);
-        //     });
-        //
-        //     $builder->seeColumnOfType('table5', 'id', 'smallint');
-        //     $builder->seeColumnOfType('table5', 'votes', 'smallint');
-        //     $builder->seeColumnOfType('table5', 'deleted_at_tz', 'timestamp');
-        //     $builder->seeColumnOfType('table5', 'deleted_at', 'timestamp');
-        //     $builder->seeColumnOfType('table5', 'description', 'text');
-        //     $builder->seeColumnOfType('table5', 'sunrise', 'time');
-        //     $builder->seeColumnOfType('table5', 'sunrise_tz', 'time');
-        //     $builder->seeColumnOfType('table5', 'added_at_tz', 'timestamp');
-        //     $builder->seeColumnOfType('table5', 'added_at', 'timestamp');
-        //     $builder->seeColumnOfType('table5', 'created_at', 'timestamp');
-        //     $builder->seeColumnOfType('table5', 'updated_at', 'timestamp');
-        //
-        //     $builder->create('table6', function (Blueprint $table) {
-        //
-        //         $table->tinyIncrements('id');
-        //         $table->tinyInteger('votes');
-        //         $table->unsignedBigInteger('signature');
-        //         $table->timestamps($precision = 0);
-        //         $table->unsignedDecimal('amount', $precision = 8, $scale = 2);
-        //
-        //
-        //     });
-        //
-        //     $builder->seeColumnOfType('table6', 'id', 'tinyint');
-        //     $builder->seeColumnOfType('table6', 'votes', 'tinyint');
-        //     $builder->seeColumnOfType('table6', 'signature', 'bigint');
-        //     $builder->seeColumnOfType('table6', 'created_at', 'timestamp');
-        //     $builder->seeColumnOfType('table6', 'updated_at', 'timestamp');
-        //     $builder->seeColumnOfType('table6', 'amount', 'decimal');
-        //
-        //     $builder->create('table7', function (Blueprint $table) {
-        //
-        //         $table->unsignedTinyInteger('vote_tiny');
-        //         $table->unsignedInteger('votes');
-        //         $table->unsignedMediumInteger('votes_medium');
-        //         $table->unsignedSmallInteger('votes_small');
-        //         $table->uuidMorphs('taggable');
-        //         $table->uuid('uuid');
-        //         $table->year('birth_year');
-        //     });
-        //
-        //     $builder->seeColumnOfType('table7', 'vote_tiny', 'tinyint');
-        //     $builder->seeColumnOfType('table7', 'votes', 'int');
-        //     $builder->seeColumnOfType('table7', 'votes_medium', 'mediumint');
-        //     $builder->seeColumnOfType('table7', 'votes_small', 'smallint');
-        //     $builder->seeColumnOfType('table7', 'taggable_id', 'char');
-        //     $builder->seeColumnOfType('table7', 'taggable_type', 'varchar');
-        //     $builder->seeColumnOfType('table7', 'uuid', 'char');
-        //     $builder->seeColumnOfType('table7', 'birth_year', 'year');
-        //
-        //
-        // }
+        /** @test */
+        public function binary_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->binary('photo');
+
+            });
+
+            $builder->seeColumnOfType('photo', 'blob');
+
+
+        }
+
+
+        /** @test */
+        public function boolean_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->boolean('confirmed');
+
+            });
+
+            $builder->seeColumnOfType('confirmed', 'tinyint(1)');
+
+
+        }
+
+
+        /** @test */
+        public function char_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->char('name', 100);
+                $table->char('email', 255);
+
+            });
+
+            $builder->seeColumnOfType('name', 'char(100)');
+            $builder->seeColumnOfType('email', 'char(255)');
+
+
+        }
+
+        /** @test */
+        public function date_time_tz_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->dateTimeTz('created_at', 1);
+                $table->dateTimeTz('created_at_precise', 2);
+
+            });
+
+            $builder->seeColumnOfType('created_at', 'datetime(1)');
+            $builder->seeColumnOfType('created_at_precise', 'datetime(2)');
+
+
+        }
+
+
+        /** @test */
+        public function date_time_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->dateTime('created_at', 1);
+                $table->dateTime('created_at_precise', 2);
+
+            });
+
+            $builder->seeColumnOfType('created_at', 'datetime(1)');
+            $builder->seeColumnOfType('created_at_precise', 'datetime(2)');
+
+
+        }
+
+
+        /** @test */
+        public function date_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->date('date');
+
+            });
+
+            $builder->seeColumnOfType('date', 'date');
+
+
+        }
+
+
+        /** @test */
+        public function decimal_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->decimal('money');
+                $table->decimal('vote_count', 10, 3);
+
+            });
+
+            $builder->seeColumnOfType('money', 'decimal(8,2)');
+            $builder->seeColumnOfType('vote_count', 'decimal(10,3)');
+
+
+        }
+
+        /** @test */
+        public function double_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->double('money');
+                $table->double('vote_count', 10, 3);
+
+            });
+
+            $builder->seeColumnOfType('money', 'double');
+            $builder->seeColumnOfType('vote_count', 'double(10,3)');
+
+
+        }
+
+
+        /** @test */
+        public function enum_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->enum('difficulty', ['easy', 'hard']);
+
+            });
+
+            $builder->seeColumnOfType('difficulty', "enum('easy','hard')");
+
+
+        }
+
+        /** @test */
+        public function float_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->float('amount');
+                $table->float('money', 10, 3);
+
+            });
+
+            $builder->seeColumnOfType('amount', 'double(8,2)');
+            $builder->seeColumnOfType('money', 'double(10,3)');
+
+
+        }
+
+
+        /** @test */
+        public function foreign_id_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->foreignId('user_id');
+
+            });
+
+            $builder->seeColumnOfType('user_id', 'bigint unsigned');
+
+
+        }
+
+
+        /** @test */
+        public function geometry_collection_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->geometryCollection('positions');
+
+            });
+
+            $builder->seeColumnOfType('positions', 'geomcollection');
+
+
+        }
+
+
+        /** @test */
+        public function id_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->id('ID');
+
+            });
+
+            $builder->seeColumnOfType('ID', 'bigint unsigned');
+            $builder->seePrimaryKey('ID');
+
+        }
+
+
+        /** @test */
+        public function increments_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->increments('id');
+
+            });
+
+            $builder->seeColumnOfType('id', 'int unsigned');
+            $builder->seePrimaryKey('id');
+
+        }
+
+
+        /** @test */
+        public function integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->integer('amount');
+
+            });
+
+            $builder->seeColumnOfType('amount', 'int');
+
+
+        }
+
+
+        /** @test */
+        public function ip_address_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->ipAddress('visitor');
+
+            });
+
+            $builder->seeColumnOfType('visitor', 'varchar(45)');
+
+
+        }
+
+
+        /** @test */
+        public function json_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->json('options');
+
+            });
+
+            $builder->seeColumnOfType('options', 'json');
+
+
+        }
+
+        /** @test */
+        public function json_b_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->jsonB('options');
+
+            });
+
+            $builder->seeColumnOfType('options', 'json');
+
+        }
+
+
+        /** @test */
+        public function line_string_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->lineString('position');
+
+            });
+
+            $builder->seeColumnOfType('position', 'linestring');
+
+
+        }
+
+
+        /** @test */
+        public function long_text_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->longText('description');
+
+            });
+
+            $builder->seeColumnOfType('description', 'longtext');
+
+
+        }
+
+        /** @test */
+        public function mac_address_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->macAddress('device');
+
+            });
+
+            $builder->seeColumnOfType('device', 'varchar(17)');
+
+
+        }
+
+
+        /** @test */
+        public function medium_increments_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->mediumIncrements('id');
+
+            });
+
+            $builder->seeColumnOfType('id', 'mediumint unsigned');
+            $builder->seePrimaryKey('id');
+
+        }
+
+
+        /** @test */
+        public function medium_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->mediumInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'mediumint');
+
+
+        }
+
+        /** @test */
+        public function medium_text_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->mediumText('descriptions');
+
+            });
+
+            $builder->seeColumnOfType('descriptions', 'mediumtext');
+
+
+        }
+
+
+        /** @test */
+        public function morphs_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->morphs('taggable');
+
+            });
+
+            $builder->seeColumnOfType('taggable_id', 'bigint unsigned');
+            $builder->seeColumnOfType('taggable_type', 'varchar(255)');
+
+
+        }
+
+
+        /** @test */
+        public function multi_line_string_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->multiLineString('positions');
+
+            });
+
+            $builder->seeColumnOfType('positions', 'multilinestring');
+
+        }
+
+
+        /** @test */
+        public function multi_point_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->multiPoint('positions');
+
+            });
+
+            $builder->seeColumnOfType('positions', 'multipoint');
+
+
+        }
+
+
+        /** @test */
+        public function multi_polygon_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->multiPolygon('positions');
+
+            });
+
+            $builder->seeColumnOfType('positions', 'multipolygon');
+
+
+        }
+
+
+        /** @test */
+        public function nullable_timestamps_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->nullableTimestamps('1');
+
+            });
+
+            $builder->seeColumnOfType('created_at', 'timestamp(1)');
+            $builder->seeColumnOfType('updated_at', 'timestamp(1)');
+            assertTrue($builder->seeNullableColumn('created_at'));
+            assertTrue($builder->seeNullableColumn('updated_at'));
+
+        }
+
+
+        /** @test */
+        public function nullable_morphs_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->nullableMorphs('taggable');
+
+            });
+
+            $builder->seeColumnOfType('taggable_id', 'bigint unsigned');
+            $builder->seeColumnOfType('taggable_type', 'varchar(255)');
+            assertTrue($builder->seeNullableColumn('taggable_id'));
+            assertTrue($builder->seeNullableColumn('taggable_type'));
+
+        }
+
+
+        /** @test */
+        public function nullable_uuid_morphs_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->nullableUuidMorphs('taggable');
+
+            });
+
+            $builder->seeColumnOfType('taggable_id', 'char(36)');
+            $builder->seeColumnOfType('taggable_type', 'varchar(255)');
+            assertTrue($builder->seeNullableColumn('taggable_id'));
+            assertTrue($builder->seeNullableColumn('taggable_type'));
+
+
+        }
+
+
+        /** @test */
+        public function point_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->point('position');
+
+            });
+
+            $builder->seeColumnOfType('position', 'point');
+
+
+        }
+
+
+        /** @test */
+        public function polygon_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->polygon('position');
+
+            });
+
+            $builder->seeColumnOfType('position', 'polygon');
+
+
+        }
+
+        /** @test */
+        public function remember_token_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->rememberToken();
+
+            });
+
+            $builder->seeColumnOfType('remember_token', 'varchar(100)');
+
+
+        }
+
+        /** @test */
+        public function set_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->set('flavors', ['strawberry', 'vanilla']);
+
+
+            });
+
+            $builder->seeColumnOfType('flavors', "set('strawberry','vanilla')");
+
+
+        }
+
+
+        /** @test */
+        public function small_increments_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->smallIncrements('id');
+
+            });
+
+            $builder->seeColumnOfType('id', 'smallint unsigned');
+
+            $builder->seePrimaryKey('id');
+
+        }
+
+
+        /** @test */
+        public function small_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->smallInteger('amount');
+
+            });
+
+            $builder->seeColumnOfType('amount', 'smallint');
+
+
+        }
+
+        /** @test */
+        public function soft_deletes_tz_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->softDeletesTz('deleted_at');
+                $table->softDeletesTz('deleted_at_precise', 2);
+
+            });
+
+            $builder->seeColumnOfType('deleted_at', 'timestamp');
+            $builder->seeColumnOfType('deleted_at_precise', 'timestamp(2)');
+
+
+        }
+
+        /** @test */
+        public function soft_deletes_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->softDeletes('deleted_at');
+                $table->softDeletes('deleted_at_precise', 2);
+
+            });
+
+            $builder->seeColumnOfType('deleted_at', 'timestamp');
+            $builder->seeColumnOfType('deleted_at_precise', 'timestamp(2)');
+
+
+        }
+
+        /** @test */
+        public function string_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->string('name', 55);
+
+            });
+
+            $builder->seeColumnOfType('name', 'varchar(55)');
+
+
+        }
+
+        /** @test */
+        public function text_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->text('description');
+
+            });
+
+            $builder->seeColumnOfType('description', 'text');
+
+
+        }
+
+
+        /** @test */
+        public function time_tz_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->timeTz('sunrise', 2);
+
+            });
+
+            $builder->seeColumnOfType('sunrise', 'time(2)');
+
+
+        }
+
+        /** @test */
+        public function time_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->time('sunrise', 2);
+
+            });
+
+            $builder->seeColumnOfType('sunrise', 'time(2)');
+
+
+        }
+
+
+        /** @test */
+        public function timestamp_tz_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->timestampTz('added_at', 2);
+
+            });
+
+            $builder->seeColumnOfType('added_at', 'timestamp(2)');
+
+        }
+
+        /** @test */
+        public function timestamp_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->timestamp('added_at', 2);
+
+            });
+
+            $builder->seeColumnOfType('added_at', 'timestamp(2)');
+
+        }
+
+        /** @test */
+        public function timestamps_tz_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->timestampsTz(2);
+
+            });
+
+            $builder->seeColumnOfType('created_at', 'timestamp(2)');
+            $builder->seeColumnOfType('updated_at', 'timestamp(2)');
+
+        }
+
+
+        /** @test */
+        public function timestamps_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->timestamps(2);
+
+            });
+
+            $builder->seeColumnOfType('created_at', 'timestamp(2)');
+            $builder->seeColumnOfType('updated_at', 'timestamp(2)');
+
+        }
+
+        /** @test */
+        public function tiny_increments_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->tinyIncrements('id');
+
+            });
+
+            $builder->seeColumnOfType('id', 'tinyint unsigned');
+
+            $builder->seePrimaryKey('id');
+
+
+        }
+
+
+        /** @test */
+        public function tiny_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->tinyInteger('amount');
+
+            });
+
+            $builder->seeColumnOfType('amount', 'tinyint');
+
+
+        }
+
+        /** @test */
+        public function unsigned_big_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedBigInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'bigint unsigned');
+
+
+        }
+
+        /** @test */
+        public function unsigned_decimal_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedDecimal('votes', '10', '2');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'decimal(10,2) unsigned');
+
+
+        }
+
+        /** @test */
+        public function unsigned_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'int unsigned');
+
+
+        }
+
+        /** @test */
+        public function unsigned_medium_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedMediumInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'mediumint unsigned');
+
+
+        }
+
+        /** @test */
+        public function unsigned_small_integer_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedSmallInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'smallint unsigned');
+
+
+        }
+
+        /** @test */
+        public function unsigned_tiny_int_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->unsignedTinyInteger('votes');
+
+            });
+
+            $builder->seeColumnOfType('votes', 'tinyint unsigned');
+
+
+        }
+
+        /** @test */
+        public function uuid_morphs_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->uuidMorphs('taggable');
+
+            });
+
+            $builder->seeColumnOfType('taggable_id', 'char(36)');
+            $builder->seeColumnOfType('taggable_type', 'varchar(255)');
+
+
+        }
+
+
+        /** @test */
+        public function uuid_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->uuid('id');
+
+            });
+
+            $builder->seeColumnOfType('id', 'char(36)');
+
+
+        }
+
+        /** @test */
+        public function year_works()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->year('birt_year');
+
+            });
+
+            $builder->seeColumnOfType('birt_year', 'year');
+
+
+        }
+
+
 
 
         /**
+         *
+         *
+         *
+         *
+         *
+         *
          * TEST FOR MODIFYING COLUMNS
+         *
+         *
+         *
+         *
+         *
+         *
+         *
+         *
          */
 
         /** @test */
@@ -469,7 +1400,7 @@
             });
 
             // Without after method()
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->string('last_name');
                 $table->string('phone');
@@ -482,7 +1413,7 @@
             $builder->dropColumns('table1', ['last_name', 'phone']);
 
             // With after() method
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->string('last_name')->after('first_name');
                 $table->string('phone')->after('last_name');
@@ -509,7 +1440,7 @@
                 $builder->getColumnsByOrdinalPosition('table1')
             );
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->after('name', function ($table) {
 
@@ -544,7 +1475,7 @@
 
             });
 
-            $builder->seeColumnOfType( 'user_id', 'int');
+            $builder->seeColumnOfType('user_id', 'int');
 
             $this->tester->haveInDatabase('wp_table1', ['email' => 'calvin@gmail.com']);
             $this->tester->haveInDatabase('wp_table1',
@@ -684,7 +1615,7 @@
 
             assertSame(['id', 'count', 'name'], $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
 
                 $table->string('email')->first();
@@ -710,8 +1641,8 @@
 
             });
 
-            $builder->seeColumnOfType( 'id', 'bigint unsigned');
-            $builder->seeColumnOfType( 'email', 'varchar(255)');
+            $builder->seeColumnOfType('id', 'bigint unsigned');
+            $builder->seeColumnOfType('email', 'varchar(255)');
 
             try {
 
@@ -728,7 +1659,7 @@
 
             $builder->dropColumns('table1', 'email');
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->string('email')->nullable(true);
 
@@ -963,7 +1894,19 @@
 
 
         /**
+         *
+         *
+         *
+         *
+         *
+         *
          * TESTS FOR DROPPING COLUMNS WITH ALIASES
+         *
+         *
+         *
+         *
+         *
+         *
          */
 
         /** @test */
@@ -983,7 +1926,7 @@
             assertSame(['id', 'taggable_type', 'taggable_id'],
                 $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropMorphs('taggable');
 
@@ -1009,7 +1952,7 @@
 
             assertSame(['id', 'remember_token'], $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropRememberToken();
 
@@ -1034,7 +1977,7 @@
 
             assertSame(['id', 'deleted_at'], $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropSoftDeletes();
 
@@ -1059,7 +2002,7 @@
 
             assertSame(['id', 'deleted_at'], $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropSoftDeletesTz();
 
@@ -1082,9 +2025,10 @@
 
             });
 
-            assertSame(['id', 'created_at', 'updated_at'], $builder->getColumnsByOrdinalPosition('table1'));
+            assertSame(['id', 'created_at', 'updated_at'],
+                $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropTimestamps();
 
@@ -1107,9 +2051,10 @@
 
             });
 
-            assertSame(['id', 'created_at', 'updated_at'], $builder->getColumnsByOrdinalPosition('table1'));
+            assertSame(['id', 'created_at', 'updated_at'],
+                $builder->getColumnsByOrdinalPosition('table1'));
 
-            $builder->table('table1', function (Blueprint $table) {
+            $builder->modify('table1', function (Blueprint $table) {
 
                 $table->dropTimestampsTz();
 
@@ -1118,6 +2063,400 @@
             assertSame(['id'], $builder->getColumnListing('table1'));
         }
 
+
+        /**
+         *
+         *
+         *
+         *
+         *
+         *
+         *
+         * Creating indexes
+         *
+         *
+         *
+         *
+         *
+         *
+         *
+         */
+
+        /** @test */
+        public function unique_indexes_work()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('email')->unique();
+                $table->string('name');
+
+
+            });
+
+            $builder->seeUniqueColumn('email');
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+                $table->unique('name');
+
+            });
+
+            $builder->seeUniqueColumn('email');
+            $builder->seeUniqueColumn('name');
+
+
+        }
+
+        /** @test */
+        public function normal_indexes_work()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('email')->index();
+                $table->string('name');
+                $table->string('address');
+
+
+            });
+
+            $builder->seeIndexColumn('email');
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+                $table->index('address');
+
+            });
+
+            $builder->seeIndexColumn('address');
+
+
+        }
+
+        /** @test */
+        public function a_composite_index_can_be_added()
+        {
+
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+
+                $table->id();
+                $table->string('name');
+                $table->string('email');
+                $table->string('address');
+
+            });
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+                $table->index(['name', 'email', 'address']);
+
+            });
+
+            $builder->seeIndexColumn('name');
+
+
+        }
+
+        /** @test */
+        public function a_primary_key_index_can_be_created()
+        {
+
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->string('email');
+                $table->string('name')->primary();
+
+            });
+
+            $builder->seePrimaryKey('name');
+
+        }
+
+        /** @test */
+        public function an_index_can_be_renamed()
+        {
+
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('name')->index();
+
+            });
+
+            $builder->seeIndexColumn('name');
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+                $table->renameIndex('table1_name_index', 'new_index');
+
+            });
+
+            $builder->seeIndexColumn('name');
+
+        }
+
+
+
+        /**
+         *
+         *
+         *
+         *
+         *
+         *
+         *
+         * Dropping Indexes.
+         *
+         *
+         *
+         *
+         *
+         *
+         *
+         */
+
+        /** @test */
+        public function indexes_can_be_dropped()
+        {
+
+            $builder = $this->newTestBuilder('table1');
+
+            $builder->create('table1', function (Blueprint $table) {
+
+                $table->integer('amount')->primary();
+                $table->string('name')->index();
+                $table->string('phone')->index();
+                $table->string('email')->unique();
+
+            });
+
+            $builder->seeIndexColumn('name');
+            $builder->seePrimaryKey('amount');
+            $builder->seeUniqueColumn('email');
+            $builder->seeIndexColumn('phone');
+
+            $builder->modify('table1', function (Blueprint $table) {
+
+                $table->dropPrimary('table1_amount_primary');
+                $table->dropUnique('table1_email_unique');
+                $table->dropIndex(['phone']);
+                $table->dropIndex(['name']);
+
+
+            });
+
+            $name = $builder->getFullColumnInfo('table1')['amount'];
+            assertEmpty($name['Key']);
+
+            $name = $builder->getFullColumnInfo('table1')['name'];
+            assertEmpty($name['Key']);
+
+            $email = $builder->getFullColumnInfo('table1')['email'];
+            assertEmpty($email['Key']);
+
+            $phone = $builder->getFullColumnInfo('table1')['phone'];
+            assertEmpty($phone['Key']);
+
+
+        }
+
+
+        /**
+         *
+         *
+         *
+         *
+         *
+         *
+         * Foreign Key Constraints
+         *
+         *
+         *
+         *
+         *
+         *
+         */
+
+        /** @test */
+        public function foreign_key_can_be_created()
+        {
+
+            $builder1 = $this->newTestBuilder('authors');
+
+            $builder1->create('authors', function (Blueprint $table) {
+
+                $table->id();
+
+            });
+
+            $builder2 = $this->newTestBuilder('books');
+
+            $builder2->create('books', function (Blueprint $table) {
+
+                $table->id();
+
+                $table->foreignId('author_id')->unique()
+                      ->constrained()
+                      ->onUpdate('cascade')
+                      ->onDelete('cascade');
+
+            });
+
+            $builder1->seePrimaryKey('id');
+            $builder2->seePrimaryKey('id');
+
+
+        }
+
+
+        /** @test */
+        public function foreign_keys_cascade_correctly_on_update()
+        {
+
+            $builder1 = $this->newTestBuilder('authors');
+
+            $builder1->create('authors', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('author_name');
+
+            });
+
+            $builder2 = $this->newTestBuilder('books');
+
+            $builder2->create('books', function (Blueprint $table) {
+
+                $table->id();
+
+                $table->foreignId('author_id')->unique()
+                      ->constrained()
+                      ->onUpdate('cascade');
+
+            });
+
+            $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
+            $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
+
+            $this->tester->updateInDatabase('wp_authors', ['id' => '2'] , ['author_name' => 'calvin alkan'] );
+
+            $this->tester->seeInDatabase('wp_books',  ['id' => 1, 'author_id' => 2]);
+
+        }
+
+
+        /** @test */
+        public function foreign_keys_cascade_correctly_on_delete()
+        {
+
+            $builder1 = $this->newTestBuilder('authors');
+
+            $builder1->create('authors', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('author_name');
+
+            });
+
+            $builder2 = $this->newTestBuilder('books');
+
+            $builder2->create('books', function (Blueprint $table) {
+
+                $table->id();
+
+                $table->foreignId('author_id')->unique()
+                      ->constrained()
+                      ->onDelete('cascade');
+
+            });
+
+            $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
+            $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
+
+            $this->tester->dontHaveInDatabase('wp_authors', ['id' => 1, 'author_name' => 'calvin alkan']);
+
+            $this->tester->dontSeeInDatabase('wp_books',  ['id' => 1, 'author_id' => 1]);
+
+
+        }
+
+
+        /** @test */
+        public function foreign_keys_can_be_dropped () {
+
+            $builder1 = $this->newTestBuilder('authors');
+
+            $builder1->create('authors', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('author_name');
+
+            });
+
+            $builder2 = $this->newTestBuilder('books');
+
+            $builder2->create('books', function (Blueprint $table) {
+
+                $table->id();
+
+                $table->foreignId('author_id')->unique()
+                      ->constrained()
+                      ->onDelete('cascade');
+
+            });
+
+            $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
+            $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
+
+
+            $builder2->modify('books', function (Blueprint $table) {
+
+
+               $table->dropForeign(['author_id']);
+
+
+            });
+
+            $this->tester->dontHaveInDatabase('wp_authors', ['id' => 1, 'author_name' => 'calvin alkan']);
+
+            $this->tester->seeInDatabase('wp_books',  ['id' => 1, 'author_id' => 1]);
+
+
+        }
+
+
+
+
+        /**
+         *
+         *
+         *
+         *
+         *
+         * Helper methods
+         *
+         *
+         *
+         *
+         *
+         *
+         */
 
         private function newSchemaBuilder()
         {
@@ -1148,14 +2487,14 @@
 
         }
 
-        private function newTestBuilder($table = null )
+        private function newTestBuilder($table = null)
         {
 
             global $wpdb;
 
             $wp_connection = new WpConnection($wpdb);
 
-            return new TestSchemaBuilder($wp_connection, $table );
+            return new TestSchemaBuilder($wp_connection, $table);
 
 
         }
@@ -1178,14 +2517,15 @@
         private $table;
 
 
-        public function __construct( $connection, $table = null )
+        public function __construct($connection, $table = null)
         {
+
             $this->table = $table;
 
             parent::__construct($connection);
         }
 
-        public function seeColumnOfType( $column, $type)
+        public function seeColumnOfType($column, $type)
         {
 
             $table = $this->table;
@@ -1193,10 +2533,41 @@
             assertTrue($this->hasColumn($table, $column),
                 'Column: '.$column.' not found.');
             assertSame($type, $this->getColumnType($table, $column),
-                'Column types dont match for colum: '.$column);
+                'Column types dont match for column: '.$column);
 
         }
 
+
+        public function seePrimaryKey($column)
+        {
+
+            $col = $this->getFullColumnInfo($this->table)[$column];
+            assertTrue($col['Key'] === 'PRI');
+
+        }
+
+        public function seeNullableColumn(string $column) : bool
+        {
+
+            $col = $this->getFullColumnInfo($this->table)[$column];
+
+            return $col['Null'] === 'YES';
+        }
+
+        public function seeUniqueColumn(string $column)
+        {
+
+            $col = $this->getFullColumnInfo($this->table)[$column];
+            assertTrue($col['Key'] === 'UNI');
+        }
+
+        public function seeIndexColumn(string $column)
+        {
+
+            $col = $this->getFullColumnInfo($this->table)[$column];
+            assertTrue($col['Key'] === 'MUL');
+
+        }
 
 
     }
