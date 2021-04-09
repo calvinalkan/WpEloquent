@@ -111,7 +111,7 @@
          *
          * @param  wpdb  $wpdb
          */
-        public function __construct(wpdb $wpdb)
+        public function __construct( wpdb $wpdb)
         {
 
             $this->wpdb = $wpdb;
@@ -364,6 +364,7 @@
             $query = vsprintf($query, $bindings);
 
             return $query;
+
         }
 
 
@@ -371,7 +372,7 @@
 
         /**
          * Here we escape any string values that might be passed from the query.
-         * !important. esc_sql can only be used for values that are places inside backticks.
+         * !important. esc_sql can only be used for values that are places inside quotation marks.
          * Users should NEVER EVER be allowed to dictate the columns, order or any order SQL
          * Keyword.
          *
@@ -379,16 +380,15 @@
          *
          * @return string|null
          */
-        private function sanitizeSql($statement ) : ?string
+        private function sanitizeSql( $statement ) : ?string
         {
 
-            if (is_string($statement)  ) {
+            if (is_string( $statement)  ) {
+
 
                 $statement = "'".esc_sql($statement)."'";
 
             }
-
-
 
             return $statement ?? null;
 
@@ -405,21 +405,24 @@
         public function prepareBindings(array $bindings) : array
         {
 
-            foreach ($bindings as $key => $value) {
+            foreach ($bindings as $key => $binding) {
 
                 // Micro-optimization: check for scalar values before instances
-                if (is_bool($value)) {
-                    $bindings[$key] = intval($value);
+                if (is_bool($binding)) {
+                    $bindings[$key] = intval($binding);
                 }
-                elseif (is_scalar($value)) {
+                elseif (is_scalar($binding)) {
+
                     continue;
+                    // $bindings[$key] = str_replace('%', '%%', $binding);
+
                 }
-                elseif ($value instanceof DateTime) {
+                elseif ($binding instanceof DateTime) {
 
                     // We need to transform all instances of the DateTime class into an actual
                     // date string. Each query grammar maintains its own date string format
                     // so we'll just ask the grammar for the format to get from the date.
-                    $bindings[$key] = $value->format( $this->getQueryGrammar()->getDateFormat() );
+                    $bindings[$key] = $binding->format( $this->getQueryGrammar()->getDateFormat() );
 
                 }
             }
@@ -522,10 +525,10 @@
                     return [];
                 }
 
+                // This breaks the Schema Builder if its ARRAY_N. Inside MySQl Processor.
                 $result = $this->wpdb->get_results($sql_query, ARRAY_A);
 
                 return ($this->wasSuccessful($result)) ? $result : [];
-
 
             }
             );
