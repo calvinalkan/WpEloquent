@@ -36,6 +36,12 @@
 
             }
 
+            if ( ! defined('ARRAY_A')) {
+
+                define('ARRAY_A', 'ARRAY_A');
+
+            }
+
             $this->wpdb = m::mock(wpdb::class);
             $this->wpdb->prefix = 'wp_';
             $this->wp = new WpConnection($this->wpdb);
@@ -144,8 +150,7 @@
          * @test
          * @doesNotPerformAssertions
          */
-        public function like_statements_can_process_underscores_and_percent_signs_when_using_variables(
-        )
+        public function like_statements_process_underscores_and_percent_signs_when_using_variables()
         {
 
             $this->wpdb->shouldReceive('prepare')
@@ -271,6 +276,9 @@
         }
 
 
+
+
+
         private function newBuilder() : Builder
         {
 
@@ -302,3 +310,5 @@
         }
 
     }
+
+

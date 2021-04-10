@@ -51,6 +51,7 @@
 
         }
 
+
         private function createWpDbPlaceholders() : array
         {
 

@@ -105,16 +105,23 @@
          */
         protected $transaction_count = 0;
 
+        /**
+         * @var SanitizerFactory
+         */
+        private $query_sanitizer;
+
 
         /**
          * Create a new database connection instance.
          *
          * @param  wpdb  $wpdb
          */
-        public function __construct( wpdb $wpdb)
+        public function __construct( wpdb $wpdb, SanitizerFactory $sanitizer = null )
         {
 
             $this->wpdb = $wpdb;
+
+            $this->query_sanitizer = $sanitizer ?? new SanitizerFactory($wpdb);
 
             // First we will setup the default properties. We keep track of the DB
             // name we are connected to since it is needed when some reflective
@@ -340,7 +347,8 @@
         */
 
         /**
-         * SQL escape the bindings and then vsprint them into the query placeholders
+         *
+         * SQL escapes the bindings using the native wpdb::prepare() method.
          *
          * @param $query
          * @param $bindings
@@ -350,22 +358,18 @@
         public function prepareQuery($query, $bindings)
         {
 
-            $query = str_replace('"', '`', $query);
 
             $bindings = $this->prepareBindings($bindings);
 
             if ( ! $bindings) {
+
                 return $query;
             }
 
-            $bindings = array_map([$this, 'sanitizeSql'], $bindings);
-
-            $query = str_replace(['%', '?'], ['%%', '%s'], $query);
-            $query = vsprintf($query, $bindings);
-
-            return $query;
+            return $this->query_sanitizer->make($query, $bindings)->sanitize();
 
         }
+
 
 
 
