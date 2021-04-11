@@ -20,3 +20,4 @@ params:
     - .env.testing
 coverage:
     enabled: true
+bootstrap: bootstrap.php

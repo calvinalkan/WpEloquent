@@ -7,6 +7,13 @@
     use Exception;
     use \Closure;
 
+    /**
+     * Trait InteractsWithWpDb
+     *
+     *
+     * @property \wpdb $wpdb
+     *
+     */
     trait InteractsWithWpDb
     {
 
@@ -57,7 +64,6 @@
             // run the SQL against the wpdb class .
             try {
 
-
                 $sql_query = $this->prepareQuery($query, $bindings);
 
                 $start = microtime(true);
@@ -71,7 +77,8 @@
 
                 return $result;
 
-            } catch (Exception $e) {
+            }
+            catch (Exception $e) {
 
                 $this->throwQueryException($query, $bindings, $e);
 
@@ -80,7 +87,8 @@
         }
 
 
-        public function runWpDbUnprepared (  $sql_query , Closure $callback) {
+        public function runWpDbUnprepared($sql_query, Closure $callback)
+        {
 
 
             // To execute the statement, we'll simply call the callback, which will actually
@@ -92,13 +100,14 @@
 
                 $result = $callback($sql_query);
 
-                $this->logQuery($sql_query , [] , $this->getElapsedTime($start));
+                $this->logQuery($sql_query, [], $this->getElapsedTime($start));
 
                 return $result;
 
-            } catch (Exception $e) {
+            }
+            catch (Exception $e) {
 
-                $this->throwQueryException($sql_query, [] , $e);
+                $this->throwQueryException($sql_query, [], $e);
 
             }
 
@@ -157,7 +166,7 @@
 
             $this->logQuery($query, [], $this->getElapsedTime($start));
 
-            return is_int($result) ? true : $result;
+            return is_int($result) && $result > 0;
 
         }
 
@@ -179,9 +188,8 @@
         private function wasSuccessful($result) : bool
         {
 
-            return  $result && empty($this->wpdb->last_error);
+            return $result && empty($this->wpdb->last_error);
         }
-
 
 
     }

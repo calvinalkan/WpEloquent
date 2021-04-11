@@ -111,6 +111,11 @@
          */
         private $query_sanitizer;
 
+        /**
+         * @var WpDbPdoAdapter
+         */
+        private $wpdb_to_pdo_adapter;
+
 
         /**
          * Create a new database connection instance.
@@ -133,6 +138,8 @@
             $this->schema_grammar = $this->withTablePrefix(new MySqlSchemaGrammar());
 
             $this->post_processor = new MySqlProcessor();
+
+            $this->wpdb_to_pdo_adapter = new WpDbPdoAdapter($wpdb);
 
 
         }
@@ -247,30 +254,6 @@
         }
 
 
-        /**
-         * Here we escape any string values that might be passed from the query.
-         * !important. esc_sql can only be used for values that are places inside quotation marks.
-         * Users should NEVER EVER be allowed to dictate the columns, order or any order SQL
-         * Keyword.
-         *
-         * @param $statement
-         *
-         * @return string|null
-         */
-        private function sanitizeSql($statement) : ?string
-        {
-
-            if (is_string($statement)) {
-
-
-                $statement = "'".esc_sql($statement)."'";
-
-            }
-
-            return $statement ?? null;
-
-        }
-
 
         /**
          * Prepare the query bindings for execution.
@@ -341,6 +324,7 @@
 
         }
 
+
         /**
          * Get a new query builder instance.
          *
@@ -368,16 +352,16 @@
         public function selectOne($query, $bindings = [], $useReadPdo = true)
         {
 
-
             return $this->runWpDB($query, $bindings, function ($sql_query) {
 
                 if ($this->pretending) {
                     return [];
                 }
 
-                return $this->wpdb->get_row($sql_query);
+                return $this->wpdb->get_row($sql_query, ARRAY_A);
 
             }
+
             );
 
 
@@ -429,7 +413,7 @@
          *
          * @return bool
          */
-        public function insert($query, $bindings = []) : bool
+        public function insert( $query, $bindings = [] ) : bool
         {
 
             return $this->statement($query, $bindings);
@@ -480,8 +464,8 @@
 
             return $this->runWpDbAndReturnBool($query, $bindings);
 
-
         }
+
 
         /**
          * Run an SQL statement and get the number of rows affected.
@@ -500,9 +484,8 @@
                     return 0;
                 }
 
-                $this->wpdb->query($sql_query);
+                return (int) $this->wpdb->query($sql_query);
 
-                return (int) $this->wpdb->rows_affected;
 
 
             });
@@ -602,10 +585,18 @@
 
         }
 
+
         public function getTablePrefix() : string
         {
 
             return $this->table_prefix;
+
+        }
+
+        public function getPdo() : WpDbPdoAdapter
+        {
+
+            return $this->wpdb_to_pdo_adapter;
 
         }
 

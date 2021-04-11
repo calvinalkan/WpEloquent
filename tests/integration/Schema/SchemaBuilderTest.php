@@ -9,6 +9,7 @@
     use Illuminate\Database\Schema\Builder;
     use Illuminate\Support\Str;
     use WpEloquent\MySqlSchemaBuilder;
+    use WpEloquent\SanitizerFactory;
     use WpEloquent\WpConnection;
 
     use function PHPUnit\Framework\assertEmpty;
@@ -2354,9 +2355,10 @@
             $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
             $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
 
-            $this->tester->updateInDatabase('wp_authors', ['id' => '2'] , ['author_name' => 'calvin alkan'] );
+            $this->tester->updateInDatabase('wp_authors', ['id' => '2'],
+                ['author_name' => 'calvin alkan']);
 
-            $this->tester->seeInDatabase('wp_books',  ['id' => 1, 'author_id' => 2]);
+            $this->tester->seeInDatabase('wp_books', ['id' => 1, 'author_id' => 2]);
 
         }
 
@@ -2389,16 +2391,18 @@
             $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
             $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
 
-            $this->tester->dontHaveInDatabase('wp_authors', ['id' => 1, 'author_name' => 'calvin alkan']);
+            $this->tester->dontHaveInDatabase('wp_authors',
+                ['id' => 1, 'author_name' => 'calvin alkan']);
 
-            $this->tester->dontSeeInDatabase('wp_books',  ['id' => 1, 'author_id' => 1]);
+            $this->tester->dontSeeInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
 
 
         }
 
 
         /** @test */
-        public function foreign_keys_can_be_dropped () {
+        public function foreign_keys_can_be_dropped()
+        {
 
             $builder1 = $this->newTestBuilder('authors');
 
@@ -2424,23 +2428,44 @@
             $this->tester->haveInDatabase('wp_authors', ['author_name' => 'calvin alkan']);
             $this->tester->haveInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
 
-
             $builder2->modify('books', function (Blueprint $table) {
 
 
-               $table->dropForeign(['author_id']);
+                $table->dropForeign(['author_id']);
 
 
             });
 
-            $this->tester->dontHaveInDatabase('wp_authors', ['id' => 1, 'author_name' => 'calvin alkan']);
+            $this->tester->dontHaveInDatabase('wp_authors',
+                ['id' => 1, 'author_name' => 'calvin alkan']);
 
-            $this->tester->seeInDatabase('wp_books',  ['id' => 1, 'author_id' => 1]);
+            $this->tester->seeInDatabase('wp_books', ['id' => 1, 'author_id' => 1]);
 
 
         }
 
 
+        // /** @test */
+        // public function testsdfsdfds()
+        // {
+        //
+        //     global $wpdb;
+        //
+        //     $wp = new WpConnection($wpdb, new SanitizerFactory($wpdb));
+        //
+        //     $builder = new \Illuminate\Database\Query\Builder($wp);
+        //
+        //     $builder->select('*')->from('cities')
+        //             ->where('name', 'London')
+        //             ->orWhere('name', 'Madrid');
+        //
+        //     $results = $wp->select($builder->toSql(), $builder->getBindings());
+        //
+        //
+        //     var_dump($results);
+        //
+        //
+        // }
 
 
         /**

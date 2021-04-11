@@ -100,4 +100,15 @@
         public function selectFromWriteConnection($query, $bindings = []);
 
 
+        /**
+         * Method is needed by eloquent.
+         *
+         * We return a custom adapter that lets as use wpdb like a
+         * PDO object.
+         *
+         * @return WpDbPdoAdapter
+         */
+        public function getPdo() : WpDbPdoAdapter;
+
+
     }
