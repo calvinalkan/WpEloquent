@@ -123,7 +123,9 @@
         private function escLike ($binding) : string
         {
 
-           return addcslashes( $binding, '_%\\' );
+            $test =  addcslashes( $binding, '_%\\' );
+
+           return $test;
 
         }
 

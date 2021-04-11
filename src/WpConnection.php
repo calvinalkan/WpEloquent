@@ -11,6 +11,7 @@
     use Illuminate\Database\Query\Expression;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
+    use Illuminate\Database\Query\Processors\PostgresProcessor;
     use Illuminate\Support\Arr;
     use wpdb;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
@@ -116,74 +117,31 @@
          *
          * @param  wpdb  $wpdb
          */
-        public function __construct( wpdb $wpdb, SanitizerFactory $sanitizer = null )
+        public function __construct(wpdb $wpdb, SanitizerFactory $sanitizer = null)
         {
 
             $this->wpdb = $wpdb;
 
             $this->query_sanitizer = $sanitizer ?? new SanitizerFactory($wpdb);
 
-            // First we will setup the default properties. We keep track of the DB
-            // name we are connected to since it is needed when some reflective
-            // type commands are run such as checking whether a table exists.
-            $this->db_name = DB_NAME ?? '';
+            $this->db_name = DB_NAME;
 
-            $this->table_prefix = ( empty($table_prefix)) ? $wpdb->prefix : $table_prefix;
+            $this->table_prefix = $wpdb->prefix;
 
-            // We need to initialize a query grammar and the query post processors
-            // which are both very important parts of the database abstractions
-            // so we initialize these to their default values while starting.
-            $this->useDefaultQueryGrammar();
+            $this->query_grammar = $this->withTablePrefix(new MySqlQueryGrammar);
 
-            $this->useDefaultPostProcessor();
+            $this->schema_grammar = $this->withTablePrefix(new MySqlSchemaGrammar());
 
-            $this->useDefaultSchemaGrammar();
-        }
+            $this->post_processor = new MySqlProcessor();
 
-
-        /*
-        |
-        |
-        |--------------------------------------------------------------------------
-        | Getters and Setters for the MySqlQueryGrammar
-        |--------------------------------------------------------------------------
-        |
-        |
-        | The QueryGrammar is used to "translate" the QueryBuilder instance into raw
-        | SQL
-        |
-        |
-        |
-        |
-        */
-
-        /**
-         * Set the query grammar to the default implementation.
-         *
-         * @return void
-         */
-        private function useDefaultQueryGrammar()
-        {
-
-            $this->query_grammar = $this->getDefaultQueryGrammar();
-        }
-
-
-        /**
-         * Get the default query grammar instance.
-         *
-         * @return Grammar|MySqlQueryGrammar
-         */
-        private function getDefaultQueryGrammar() : Grammar
-        {
-
-            return $this->withTablePrefix( new MySqlQueryGrammar );
 
         }
 
 
         /**
          * Get the query grammar used by the connection.
+         * The QueryGrammar is used to "translate" the QueryBuilder instance into raw
+         * SQL
          *
          * @return MySqlQueryGrammar;
          */
@@ -191,45 +149,6 @@
         {
 
             return $this->query_grammar;
-        }
-
-
-        /*
-        |
-        |
-        |--------------------------------------------------------------------------
-        |  Getters and Setters for the MySqlQueryPostProcessor
-        |--------------------------------------------------------------------------
-        |
-        |
-        |
-        |
-        |
-        |
-        |
-        */
-
-        /**
-         * Set the query post processor to the default implementation.
-         *
-         * @return void
-         */
-        private function useDefaultPostProcessor()
-        {
-
-            $this->post_processor = $this->getDefaultPostProcessor();
-        }
-
-
-        /**
-         * Get the default post processor instance.
-         *
-         * @return MySqlProcessor
-         */
-        private function getDefaultPostProcessor() : MySqlProcessor
-        {
-
-            return new MySqlProcessor;
         }
 
 
@@ -245,61 +164,6 @@
         }
 
 
-        /*
-        |
-        |
-        |--------------------------------------------------------------------------
-        | Getters and Setters for the MySqlSchemaGrammar
-        |--------------------------------------------------------------------------
-        |
-        |
-        | The SchemaGrammar is used for the SchemaBuilder that is necessary to
-        | manipulate tables via the CLI
-        |
-        |
-        |
-        */
-
-        /**
-         * Set the schema grammar to the default implementation.
-         *
-         * @return void
-         */
-        public function useDefaultSchemaGrammar()
-        {
-
-            $this->schema_grammar = $this->getDefaultSchemaGrammar();
-        }
-
-
-        /**
-         * Get the default schema grammar instance.
-         *
-         * @return Grammar|MySqlSchemaGrammar
-         */
-        protected function getDefaultSchemaGrammar() : Grammar
-        {
-
-            return $this->withTablePrefix( new MySqlSchemaGrammar());
-        }
-
-
-        /**
-         * Get a schema builder instance for the connection.
-         *
-         * @return MySqlSchemaBuilder
-         */
-        public function getSchemaBuilder() : MySqlSchemaBuilder
-        {
-
-            if (is_null($this->schema_grammar)) {
-                $this->useDefaultSchemaGrammar();
-            }
-
-            return new MySqlSchemaBuilder($this);
-        }
-
-
         /**
          * Get the schema grammar used by the connection.
          *
@@ -309,6 +173,18 @@
         {
 
             return $this->schema_grammar;
+        }
+
+        /**
+         * Get a schema builder instance for the connection.
+         *
+         * @return MySqlSchemaBuilder
+         */
+        public function getSchemaBuilder() : MySqlSchemaBuilder
+        {
+
+            return new MySqlSchemaBuilder($this);
+
         }
 
 
@@ -359,19 +235,16 @@
         {
 
 
-            $bindings = $this->prepareBindings($bindings);
-
             if ( ! $bindings) {
 
                 return $query;
             }
 
+            $bindings = $this->prepareBindings($bindings);
+
             return $this->query_sanitizer->make($query, $bindings)->sanitize();
 
         }
-
-
-
 
 
         /**
@@ -384,10 +257,10 @@
          *
          * @return string|null
          */
-        private function sanitizeSql( $statement ) : ?string
+        private function sanitizeSql($statement) : ?string
         {
 
-            if (is_string( $statement)  ) {
+            if (is_string($statement)) {
 
 
                 $statement = "'".esc_sql($statement)."'";
@@ -426,11 +299,10 @@
                     // We need to transform all instances of the DateTime class into an actual
                     // date string. Each query grammar maintains its own date string format
                     // so we'll just ask the grammar for the format to get from the date.
-                    $bindings[$key] = $binding->format( $this->getQueryGrammar()->getDateFormat() );
+                    $bindings[$key] = $binding->format($this->getQueryGrammar()->getDateFormat());
 
                 }
             }
-
 
             return $bindings;
 
@@ -462,7 +334,7 @@
          *
          * @return QueryBuilder
          */
-        public function table($table, $as = null) : QueryBuilder
+        public function table( $table, $as = null ) : QueryBuilder
         {
 
             return $this->query()->from($table, $as);
@@ -480,6 +352,7 @@
             return new QueryBuilder(
                 $this, $this->getQueryGrammar(), $this->getPostProcessor()
             );
+
         }
 
 
@@ -539,9 +412,12 @@
 
         }
 
+
         public function selectFromWriteConnection($query, $bindings = []) : array
         {
-            return $this->select($query, $bindings, FALSE );
+
+            return $this->select($query, $bindings, false);
+
         }
 
 
@@ -664,8 +540,7 @@
         {
 
             // For now just use this do not cause errors.
-           return $this->select($query, $bindings);
-
+            return $this->select($query, $bindings);
 
 
         }
@@ -720,7 +595,8 @@
          *
          * @return string
          */
-        public function getName() :string {
+        public function getName() : string
+        {
 
             return $this->getDatabaseName();
 

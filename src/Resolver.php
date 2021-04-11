@@ -54,8 +54,7 @@
 
                 $instance = new WpConnection(
                     $this->wpdb,
-                    $this->connection_name,
-                    $this->table_prefix
+                    new SanitizerFactory($this->wpdb)
                 );
 
             }

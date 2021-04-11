@@ -56,7 +56,6 @@
             m::close();
         }
 
-
         /**
          * @test
          * @doesNotPerformAssertions
@@ -79,9 +78,7 @@
 
             $this->wpdb->shouldHaveReceived('prepare')
                        ->once()
-                       ->with("select * from `wp_cities` where `id` = %d and `name` = %s", 1,
-                           'tokyo');
-
+                       ->with("select * from `wp_cities` where `id` = %d and `name` = %s", 1, 'tokyo');
 
         }
 
@@ -155,16 +152,15 @@
 
             $this->wpdb->shouldReceive('prepare')
                        ->once()
-                       ->with("select * from `wp_cities` where `city` like %s", 'Lon%')
-                       ->andReturn('string');
+                       ->with("select * from `wp_cities` where `city` like %s", '%Lon%');
 
             $builder = $this->newBuilder();
 
-            $user_input = 'Lon';
+            $user_input = "Lon";
 
             $builder->select('*')
                     ->from('cities')
-                    ->where('city', 'like', '{'.$user_input.'}%');
+                    ->where('city', 'like', '%{'.$user_input.'}%');
 
             $sanitizer = new QuerySanitizer(
                 $this->wpdb,
@@ -274,9 +270,6 @@
 
 
         }
-
-
-
 
 
         private function newBuilder() : Builder
