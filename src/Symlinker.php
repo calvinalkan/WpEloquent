@@ -31,16 +31,13 @@
 
             }
 
-            if ( self::symlinkSet($db) && self::queryMonitorActive()) {
-
-                self::replaceQmSymlink($db);
-
-            }
 
             if ( ! self::symlinkSet($db) ) {
 
-                $reflector = new \ReflectionClass(BetterWpDb::class);
-                symlink($reflector->getFileName(), $db);
+
+                $target = __DIR__ . '/ExtendsWpdb/drop-in.php';
+
+                symlink( $target, $db);
 
             }
 
@@ -75,17 +72,6 @@
 
         }
 
-        private static function replaceQmSymlink($db)
-        {
-
-            $unlinked = unlink($db);
-
-            $reflector = new \ReflectionClass(BetterWpDbQM::class);
-            $is_symlink_to = $reflector->getFileName();
-
-            $success = symlink($is_symlink_to, $db);
-
-        }
 
         private static function isInstalledCorrectly() : bool
         {

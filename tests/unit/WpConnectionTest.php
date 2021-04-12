@@ -666,7 +666,7 @@
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->twice()->andThrow(TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(TestException::class);
 
             try {
                 $wp->beginTransaction();
@@ -685,7 +685,7 @@
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrows(new Exception('server has gone away'));
             $this->wpdb->shouldReceive('startTransaction')->once()->andReturnNull();
             $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
 

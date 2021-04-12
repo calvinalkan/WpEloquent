@@ -5,7 +5,7 @@
 
 
     use mysqli;
-    use wpdb;
+    use WpEloquent\Traits\DelegatesToWpdb;
 
 
     /**
@@ -15,20 +15,27 @@
      * of wpdb for which there currently are no getters.
      *
      */
-    class BetterWpDb extends wpdb implements WpdbInterface
+    class BetterWpDb implements WpdbInterface
     {
+
+        use DelegatesToWpdb;
 
         /**
          * @var mysqli;
          */
         protected $mysqli;
 
-        public function __construct($db_user, $db_password, $db_name, $db_host, mysqli $mysqli = null )
+        /**
+         * @var wpdb
+         */
+        protected $wpdb;
+
+        public function __construct( mysqli $mysqli , $wpdb )
         {
 
-            parent::__construct($db_user, $db_password, $db_name, $db_host);
+            $this->wpdb = $wpdb;
 
-            $this->mysqli = $mysqli ?? $this->dbh;
+            $this->mysqli = $mysqli;
 
 
         }
@@ -36,7 +43,6 @@
 
         public function doSelect($query, $bindings) : array
         {
-
 
         }
 
@@ -65,6 +71,25 @@
             // TODO: Implement doCursorSelect() method.
         }
 
+        public function startTransaction()
+        {
+            // TODO: Implement startTransaction() method.
+        }
+
+        public function commitTransaction()
+        {
+            // TODO: Implement commitTransaction() method.
+        }
+
+        public function rollbackTransaction($name = null)
+        {
+            // TODO: Implement rollbackTransaction() method.
+        }
+
+        public function createSavepoint(string $name)
+        {
+            // TODO: Implement createSavepoint() method.
+        }
+
     }
 
-    $wpdb = new BetterWpDb(DB_USER, DB_PASSWORD, DB_NAME, DB_HOST);

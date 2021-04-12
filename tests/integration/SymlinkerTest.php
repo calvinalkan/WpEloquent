@@ -20,6 +20,8 @@
 
         private $db_drop_in;
 
+        private $target_link;
+
         protected function setUp() : void
         {
 
@@ -31,6 +33,8 @@
 
                 self::assertTrue($success);
             }
+
+            $this->target_link = getenv('PACKAGE_ROOT').'/src/ExtendsWpdb/drop-in.php';
 
             parent::setUp();
 
@@ -65,36 +69,10 @@
 
             self::assertTrue(is_link($this->db_drop_in));
             self::assertTrue(file_exists($this->db_drop_in));
-
-            $reflector = new \ReflectionClass(BetterWpDb::class);
-            $is_symlink_to = $reflector->getFileName();
-
-            self::assertSame($is_symlink_to, readlink($this->db_drop_in));
+            self::assertSame($this->target_link, readlink($this->db_drop_in));
 
         }
 
-        /** @test */
-        public function a_symlink_gets_created_to_the_qm_drop_in_extension_if_qm_is_active()
-        {
-
-            $qm_db = __DIR__.'/Stubs/query-monitor/wp-content/db.php';
-
-            $this->activateQueryMonitor();
-
-            self::assertTrue(is_link($this->db_drop_in));
-            self::assertTrue(file_exists($this->db_drop_in));
-            self::assertSame($qm_db, readlink($this->db_drop_in));
-
-            $this->activatePlugin1();
-
-            self::assertTrue(is_link($this->db_drop_in));
-            self::assertTrue(file_exists($this->db_drop_in));
-
-            $reflector = new \ReflectionClass(BetterWpDbQM::class);
-            $is_symlink_to = $reflector->getFileName();
-            self::assertSame($is_symlink_to, readlink($this->db_drop_in));
-
-        }
 
         /** @test */
         public function if_a_symlink_is_created_successfully_an_option_is_stored_in_the_db()
@@ -129,8 +107,7 @@
 
             catch (\Exception $e) {
 
-                self::assertSame('The database drop-in is already symlinked to the file: '.__FILE__,
-                    $e->getMessage());
+                self::assertSame('The database drop-in is already symlinked to the file: '.__FILE__, $e->getMessage());
 
                 self::assertSame(false, get_option('better-wp-db-symlink-created'));
 
@@ -214,6 +191,8 @@
                 'The file: '.$this->db_drop_in.' doesnt exists.');
             self::assertTrue(is_link($this->db_drop_in),
                 'The file: '.$this->db_drop_in.' is not a symlink.');
+            self::assertSame($this->target_link, readlink($this->db_drop_in));
+
 
         }
 
