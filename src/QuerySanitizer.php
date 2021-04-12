@@ -5,6 +5,7 @@
 
     use Illuminate\Support\Str;
     use wpdb;
+    use WpEloquent\ExtendsWpdb\WpdbInterface;
 
     class QuerySanitizer
     {
@@ -26,7 +27,7 @@
         private $bindings;
 
 
-        public function __construct(wpdb $wpdb, string $query, array $bindings)
+        public function __construct(WpdbInterface $wpdb, string $query, array $bindings)
         {
 
             $this->wpdb = $wpdb;

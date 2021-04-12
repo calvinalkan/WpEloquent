@@ -1,7 +1,8 @@
 <?php
 
 
-    $path = getenv('WP_ROOT_FOLDER') . '/wp-content/plugins/plugin-stub';
+
+    $path = getenv('WP_ROOT_FOLDER') . '/wp-content/db.php';
 
     if (is_link($path)) {
 
@@ -9,9 +10,10 @@
 
     }
 
-    $test_path = getenv('PLUGIN_STUB_PATH');
+   $target = getenv('PACKAGE_ROOT') . '/src/ExtendsWpdb/BetterWpDb.php';
 
-    $success = @symlink( $test_path, $path);
+    $success = symlink($target, $path);
+
 
 
 

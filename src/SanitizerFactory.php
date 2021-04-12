@@ -3,6 +3,8 @@
 
     namespace WpEloquent;
 
+    use WpEloquent\ExtendsWpdb\WpdbInterface;
+
     class SanitizerFactory
     {
 
@@ -11,7 +13,7 @@
          */
         private $wpdb;
 
-        public function __construct(\wpdb $wpdb )
+        public function __construct( WpdbInterface $wpdb )
         {
 
             $this->wpdb = $wpdb;

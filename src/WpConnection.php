@@ -5,32 +5,32 @@
 
     use Closure;
     use DateTime;
+    use Exception;
     use Generator;
     use Illuminate\Database\Grammar;
     use Illuminate\Database\Query\Builder as QueryBuilder;
     use Illuminate\Database\Query\Expression;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
-    use Illuminate\Database\Query\Processors\PostgresProcessor;
+    use Illuminate\Database\QueryException;
     use Illuminate\Support\Arr;
-    use wpdb;
+    use Illuminate\Support\Str;
+    use Throwable;
+    use WpEloquent\ExtendsWpdb\WpdbInterface;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
-    use WpEloquent\Traits\InteractsWithWpDb;
     use WpEloquent\Traits\LogsQueries;
     use WpEloquent\Traits\ManagesTransactions;
 
     class WpConnection implements WpConnectionInterface
     {
 
-        use InteractsWithWpDb;
         use LogsQueries;
         use ManagesTransactions;
-        use DetectsConcurrencyErrors;
 
         /**e
          * The active wpdb connection
          *
-         * @var wpdb
+         * @var WpdbInterface
          */
         protected $wpdb;
 
@@ -106,10 +106,6 @@
          */
         protected $transaction_count = 0;
 
-        /**
-         * @var SanitizerFactory
-         */
-        private $query_sanitizer;
 
         /**
          * @var WpDbPdoAdapter
@@ -120,14 +116,12 @@
         /**
          * Create a new database connection instance.
          *
-         * @param  wpdb  $wpdb
+         * @param  WpdbInterface  $wpdb
          */
-        public function __construct(wpdb $wpdb, SanitizerFactory $sanitizer = null)
+        public function __construct(WpdbInterface $wpdb)
         {
 
             $this->wpdb = $wpdb;
-
-            $this->query_sanitizer = $sanitizer ?? new SanitizerFactory($wpdb);
 
             $this->db_name = DB_NAME;
 
@@ -230,32 +224,6 @@
         */
 
         /**
-         *
-         * SQL escapes the bindings using the native wpdb::prepare() method.
-         *
-         * @param $query
-         * @param $bindings
-         *
-         * @return mixed
-         */
-        public function prepareQuery($query, $bindings)
-        {
-
-
-            if ( ! $bindings) {
-
-                return $query;
-            }
-
-            $bindings = $this->prepareBindings($bindings);
-
-            return $this->query_sanitizer->make($query, $bindings)->sanitize();
-
-        }
-
-
-
-        /**
          * Prepare the query bindings for execution.
          *
          * @param  array  $bindings
@@ -274,7 +242,6 @@
                 elseif (is_scalar($binding)) {
 
                     continue;
-                    // $bindings[$key] = str_replace('%', '%%', $binding);
 
                 }
                 elseif ($binding instanceof DateTime) {
@@ -290,7 +257,6 @@
             return $bindings;
 
         }
-
 
 
 
@@ -317,7 +283,7 @@
          *
          * @return QueryBuilder
          */
-        public function table( $table, $as = null ) : QueryBuilder
+        public function table($table, $as = null) : QueryBuilder
         {
 
             return $this->query()->from($table, $as);
@@ -352,13 +318,13 @@
         public function selectOne($query, $bindings = [], $useReadPdo = true)
         {
 
-            return $this->runWpDB($query, $bindings, function ($sql_query) {
+            return $this->runWpDB($query, $bindings, function ($query, $bindings ) {
 
                 if ($this->pretending) {
                     return [];
                 }
 
-                return $this->wpdb->get_row($sql_query, ARRAY_A);
+               return $this->wpdb->doSelectOne($query, $bindings);
 
             }
 
@@ -380,16 +346,14 @@
         public function select($query, $bindings = [], $useReadPdo = true) : array
         {
 
-            return $this->runWpDB($query, $bindings, function ($sql_query) {
+            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
 
                 if ($this->pretending) {
                     return [];
                 }
 
-                // This breaks the Schema Builder if its ARRAY_N. Inside MySQl Processor.
-                $result = $this->wpdb->get_results($sql_query, ARRAY_A);
+                return $this->wpdb->doSelect($query, $bindings);
 
-                return ($this->wasSuccessful($result)) ? $result : [];
 
             }
             );
@@ -413,7 +377,7 @@
          *
          * @return bool
          */
-        public function insert( $query, $bindings = [] ) : bool
+        public function insert($query, $bindings = []) : bool
         {
 
             return $this->statement($query, $bindings);
@@ -462,7 +426,17 @@
         public function statement($query, $bindings = []) : bool
         {
 
-            return $this->runWpDbAndReturnBool($query, $bindings);
+            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
+
+                if ($this->pretending) {
+                    return true;
+                }
+
+                return $this->wpdb->doStatement($query, $bindings);
+
+
+            });
+
 
         }
 
@@ -478,14 +452,13 @@
         public function affectingStatement($query, $bindings = []) : int
         {
 
-            return $this->runWpDB($query, $bindings, function ($sql_query) {
+            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
 
                 if ($this->pretending) {
                     return 0;
                 }
 
-                return (int) $this->wpdb->query($sql_query);
-
+                return $this->wpdb->doAffectingStatement($query, $bindings);
 
 
             });
@@ -508,6 +481,30 @@
 
 
         /**
+         * Run a raw, unprepared query against the mysqli connection.
+         *
+         * @param  string  $query
+         *
+         * @return bool
+         */
+        public function unprepared($query) : bool
+        {
+
+            return $this->runWpDB($query, [], function ($query) {
+
+                if ($this->pretending) {
+                    return true;
+                }
+
+                return $this->wpdb->doUnprepared($query);
+
+            });
+
+
+        }
+
+
+        /**
          * Run a select statement against the database and returns a generator.
          * I dont believe that this is currently possible like it is with laravel,
          * since wpdb does not use PDO.
@@ -522,11 +519,83 @@
         public function cursor($query, $bindings = [], $useReadPdo = true)
         {
 
-            // For now just use this do not cause errors.
-            return $this->select($query, $bindings);
+            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
+
+                if ($this->pretending) {
+                    return [];
+                }
+
+                return $this->wpdb->doCursorSelect($query, $bindings);
+
+
+            }
+            );
 
 
         }
+
+
+        /**
+         * Run a SQL statement through the wpdb class.
+         *
+         * @param  string  $query
+         * @param  array  $bindings
+         * @param  Closure  $callback
+         *
+         * @return mixed
+         * @throws QueryException
+         */
+        public function runWpDB(string $query, array $bindings, Closure $callback)
+        {
+
+            // To execute the statement, we'll simply call the callback, which will actually
+            // run the SQL against the wpdb class .
+            try {
+
+
+                $start = microtime(true);
+
+                $result = $callback($query, $bindings = $this->prepareBindings($bindings));
+
+
+                if ( $this->logging_queries ) {
+
+                    $this->logQuery($query, $bindings, $this->getElapsedTime($start));
+
+                }
+
+
+                return $result;
+
+            }
+            catch (Exception $e) {
+
+                throw new QueryException($query, $bindings, $e);
+
+            }
+
+        }
+
+
+        private function isConcurrencyError( Throwable $e) : bool
+        {
+
+            $message = $e->getMessage();
+
+            return Str::contains($message, [
+                'Deadlock found when trying to get lock',
+                'deadlock detected',
+                'The database file is locked',
+                'database is locked',
+                'database table is locked',
+                'A table in the database is locked',
+                'has been chosen as the deadlock victim',
+                'Lock wait timeout exceeded; try restarting transaction',
+                'WSREP detected deadlock/conflict and aborted the transaction. Try restarting the transaction',
+            ]);
+        }
+
+
 
 
 
@@ -592,6 +661,7 @@
             return $this->table_prefix;
 
         }
+
 
         public function getPdo() : WpDbPdoAdapter
         {

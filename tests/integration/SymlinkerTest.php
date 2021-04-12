@@ -4,8 +4,8 @@
     namespace Tests\integration;
 
     use Codeception\TestCase\WPTestCase;
-    use WpEloquent\ExtendsWpDb\BetterWpDb;
-    use WpEloquent\ExtendsWpDb\BetterWpDbQM;
+    use WpEloquent\ExtendsWpdb\BetterWpDb;
+    use WpEloquent\ExtendsWpdb\BetterWpDbQM;
     use WpEloquent\Symlinker;
 
 

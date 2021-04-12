@@ -9,7 +9,6 @@
     {
 
 
-
         /*
         |
         |
@@ -59,7 +58,7 @@
          *
          * @return array
          */
-        protected function withFreshQueryLog(Closure $callback) : array
+        private function withFreshQueryLog(Closure $callback) : array
         {
 
             $loggingQueries = $this->logging_queries;
@@ -88,14 +87,14 @@
          *
          * @param  string  $query
          * @param  array  $bindings
-         * @param         $getElapsedTime
+         * @param  float  $time
          */
-        private function logQuery(string $query, array $bindings, $getElapsedTime)
+        private function logQuery(string $query, array $bindings, float $time)
         {
 
-            if ($this->logging_queries) {
-                $this->query_log[] = compact('query', 'bindings', 'time');
-            }
+
+            $this->query_log[] = compact('query', 'bindings', 'time');
+
 
         }
 
@@ -106,7 +105,7 @@
          *
          * @return float
          */
-        private function getElapsedTime($start)
+        private function getElapsedTime($start) : float
         {
 
             return round((microtime(true) - $start) * 1000, 2);

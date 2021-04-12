@@ -3,17 +3,17 @@
 
     namespace WpEloquent;
 
-    use wpdb;
+    use WpEloquent\ExtendsWpdb\WpdbInterface;
 
     class WpDbPdoAdapter
     {
 
         /**
-         * @var wpdb
+         * @var WpdbInterface
          */
         private $wpdb;
 
-        public function __construct(wpdb $wpdb)
+        public function __construct( WpdbInterface $wpdb)
         {
 
             $this->wpdb = $wpdb;

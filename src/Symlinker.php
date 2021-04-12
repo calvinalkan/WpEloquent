@@ -3,8 +3,8 @@
 
     namespace WpEloquent;
 
-    use WpEloquent\ExtendsWpDb\BetterWpDb;
-    use WpEloquent\ExtendsWpDb\BetterWpDbQM;
+    use WpEloquent\ExtendsWpdb\BetterWpDb;
+    use WpEloquent\ExtendsWpdb\BetterWpDbQM;
 
 
 

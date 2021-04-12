@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace WpEloquent\ExtendsWpDb;
+    namespace WpEloquent\ExtendsWpdb;
 
     class BetterWpDbQM
     {
