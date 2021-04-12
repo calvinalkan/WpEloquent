@@ -8,8 +8,8 @@
     use Illuminate\Database\Schema\Blueprint;
     use Illuminate\Database\Schema\Builder;
     use Illuminate\Support\Str;
+    use WpEloquent\ExtendsWpdb\WpdbInterface;
     use WpEloquent\MySqlSchemaBuilder;
-    use WpEloquent\SanitizerFactory;
     use WpEloquent\WpConnection;
 
     use function PHPUnit\Framework\assertEmpty;
@@ -31,6 +31,53 @@
          */
         protected $tester;
 
+        /**
+         * @var MySqlSchemaBuilder
+         */
+        private $builder;
+
+        /**
+         * @var WpConnection
+         */
+        private $wp_conn;
+
+
+        protected function setUp() : void
+        {
+
+            parent::setUp();
+
+            $this->wp_conn = new TestWpConnection(new SchemaBuilderWpDb());
+            $this->builder = new MySqlSchemaBuilder($this->wp_conn);
+        }
+
+
+        private function assertDidQuery ($query) {
+
+            $queries = $this->wp_conn->getLog();
+
+            assertTrue(in_array($query, $queries));
+
+        }
+
+        /** @test */
+        public function a_basic_table_can_be_created()
+        {
+
+
+            $this->builder->create('test_table', function (Blueprint $table) {
+
+                $table->id();
+
+            });
+
+            $queries = $this->wp_conn->getLog();
+
+            $this->assertDidQuery("create table `wp_test_table` (`id` bigint unsigned not null auto_increment primary key)");
+
+        }
+
+
         /** @test */
         public function a_table_can_be_created()
         {
@@ -45,6 +92,7 @@
                 $table->string('name');
                 $table->string('email');
                 $table->timestamps();
+
             });
 
             $this->tester->seeTableInDatabase('wp_test_table');
@@ -52,9 +100,9 @@
 
         }
 
-
         /** @test */
-        public function table_existence_can_be_checked()
+        public
+        function table_existence_can_be_checked()
         {
 
 
@@ -73,9 +121,9 @@
 
         }
 
-
         /** @test */
-        public function column_existence_can_be_checked()
+        public
+        function column_existence_can_be_checked()
         {
 
             $schema_builder = $this->newSchemaBuilder();
@@ -89,9 +137,9 @@
 
         }
 
-
         /** @test */
-        public function an_existing_table_can_be_updated()
+        public
+        function an_existing_table_can_be_updated()
         {
 
             $schema_builder = $this->newSchemaBuilder();
@@ -117,9 +165,9 @@
 
         }
 
-
         /** @test */
-        public function an_existing_column_can_be_renamed()
+        public
+        function an_existing_column_can_be_renamed()
         {
 
             $this->newUserTable($builder = $this->newSchemaBuilder());
@@ -134,9 +182,9 @@
 
         }
 
-
         /** @test */
-        public function a_table_can_be_dropped()
+        public
+        function a_table_can_be_dropped()
         {
 
             $this->newUserTable($builder = $this->newSchemaBuilder());
@@ -160,9 +208,9 @@
 
         }
 
-
         /** @test */
-        public function columns_can_be_dropped()
+        public
+        function columns_can_be_dropped()
         {
 
             $this->newUserTable($builder = $this->newSchemaBuilder());
@@ -200,9 +248,9 @@
 
         }
 
-
         /** @test */
-        public function all_tables_can_be_retrieved()
+        public
+        function all_tables_can_be_retrieved()
         {
 
 
@@ -221,9 +269,9 @@
 
         }
 
-
         /** @test */
-        public function all_tables_can_be_dropped()
+        public
+        function all_tables_can_be_dropped()
         {
 
 
@@ -247,7 +295,8 @@
         }
 
         /** @test */
-        public function the_column_type_can_be_found_for_the_last_query()
+        public
+        function the_column_type_can_be_found_for_the_last_query()
         {
 
             $builder = $this->newTestBuilder();
@@ -262,7 +311,6 @@
             assertSame('varchar(255)', $builder->getColumnType('table1', 'email'));
 
         }
-
 
         /**
          *
@@ -283,7 +331,8 @@
          */
 
         /** @test */
-        public function big_increments_works()
+        public
+        function big_increments_works()
         {
 
 
@@ -301,9 +350,9 @@
 
         }
 
-
         /** @test */
-        public function big_integer_works()
+        public
+        function big_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -319,9 +368,9 @@
 
         }
 
-
         /** @test */
-        public function binary_works()
+        public
+        function binary_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -337,9 +386,9 @@
 
         }
 
-
         /** @test */
-        public function boolean_works()
+        public
+        function boolean_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -355,9 +404,9 @@
 
         }
 
-
         /** @test */
-        public function char_works()
+        public
+        function char_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -376,7 +425,8 @@
         }
 
         /** @test */
-        public function date_time_tz_works()
+        public
+        function date_time_tz_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -394,9 +444,9 @@
 
         }
 
-
         /** @test */
-        public function date_time_works()
+        public
+        function date_time_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -414,9 +464,9 @@
 
         }
 
-
         /** @test */
-        public function date_works()
+        public
+        function date_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -432,9 +482,9 @@
 
         }
 
-
         /** @test */
-        public function decimal_works()
+        public
+        function decimal_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -453,7 +503,8 @@
         }
 
         /** @test */
-        public function double_works()
+        public
+        function double_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -471,9 +522,9 @@
 
         }
 
-
         /** @test */
-        public function enum_works()
+        public
+        function enum_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -490,7 +541,8 @@
         }
 
         /** @test */
-        public function float_works()
+        public
+        function float_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -508,9 +560,9 @@
 
         }
 
-
         /** @test */
-        public function foreign_id_works()
+        public
+        function foreign_id_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -526,9 +578,9 @@
 
         }
 
-
         /** @test */
-        public function geometry_collection_works()
+        public
+        function geometry_collection_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -544,9 +596,9 @@
 
         }
 
-
         /** @test */
-        public function id_works()
+        public
+        function id_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -562,9 +614,9 @@
 
         }
 
-
         /** @test */
-        public function increments_works()
+        public
+        function increments_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -580,9 +632,9 @@
 
         }
 
-
         /** @test */
-        public function integer_works()
+        public
+        function integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -598,9 +650,9 @@
 
         }
 
-
         /** @test */
-        public function ip_address_works()
+        public
+        function ip_address_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -616,9 +668,9 @@
 
         }
 
-
         /** @test */
-        public function json_works()
+        public
+        function json_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -635,7 +687,8 @@
         }
 
         /** @test */
-        public function json_b_works()
+        public
+        function json_b_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -650,9 +703,9 @@
 
         }
 
-
         /** @test */
-        public function line_string_works()
+        public
+        function line_string_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -668,9 +721,9 @@
 
         }
 
-
         /** @test */
-        public function long_text_works()
+        public
+        function long_text_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -687,7 +740,8 @@
         }
 
         /** @test */
-        public function mac_address_works()
+        public
+        function mac_address_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -703,9 +757,9 @@
 
         }
 
-
         /** @test */
-        public function medium_increments_works()
+        public
+        function medium_increments_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -721,9 +775,9 @@
 
         }
 
-
         /** @test */
-        public function medium_integer_works()
+        public
+        function medium_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -740,7 +794,8 @@
         }
 
         /** @test */
-        public function medium_text_works()
+        public
+        function medium_text_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -756,9 +811,9 @@
 
         }
 
-
         /** @test */
-        public function morphs_works()
+        public
+        function morphs_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -775,9 +830,9 @@
 
         }
 
-
         /** @test */
-        public function multi_line_string_works()
+        public
+        function multi_line_string_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -792,9 +847,9 @@
 
         }
 
-
         /** @test */
-        public function multi_point_works()
+        public
+        function multi_point_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -810,9 +865,9 @@
 
         }
 
-
         /** @test */
-        public function multi_polygon_works()
+        public
+        function multi_polygon_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -828,9 +883,9 @@
 
         }
 
-
         /** @test */
-        public function nullable_timestamps_works()
+        public
+        function nullable_timestamps_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -848,9 +903,9 @@
 
         }
 
-
         /** @test */
-        public function nullable_morphs_works()
+        public
+        function nullable_morphs_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -868,9 +923,9 @@
 
         }
 
-
         /** @test */
-        public function nullable_uuid_morphs_works()
+        public
+        function nullable_uuid_morphs_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -889,9 +944,9 @@
 
         }
 
-
         /** @test */
-        public function point_works()
+        public
+        function point_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -907,9 +962,9 @@
 
         }
 
-
         /** @test */
-        public function polygon_works()
+        public
+        function polygon_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -926,7 +981,8 @@
         }
 
         /** @test */
-        public function remember_token_works()
+        public
+        function remember_token_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -943,7 +999,8 @@
         }
 
         /** @test */
-        public function set_works()
+        public
+        function set_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -960,9 +1017,9 @@
 
         }
 
-
         /** @test */
-        public function small_increments_works()
+        public
+        function small_increments_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -979,9 +1036,9 @@
 
         }
 
-
         /** @test */
-        public function small_integer_works()
+        public
+        function small_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -998,7 +1055,8 @@
         }
 
         /** @test */
-        public function soft_deletes_tz_works()
+        public
+        function soft_deletes_tz_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1017,7 +1075,8 @@
         }
 
         /** @test */
-        public function soft_deletes_works()
+        public
+        function soft_deletes_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1036,7 +1095,8 @@
         }
 
         /** @test */
-        public function string_works()
+        public
+        function string_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1053,7 +1113,8 @@
         }
 
         /** @test */
-        public function text_works()
+        public
+        function text_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1069,9 +1130,9 @@
 
         }
 
-
         /** @test */
-        public function time_tz_works()
+        public
+        function time_tz_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1088,7 +1149,8 @@
         }
 
         /** @test */
-        public function time_works()
+        public
+        function time_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1104,9 +1166,9 @@
 
         }
 
-
         /** @test */
-        public function timestamp_tz_works()
+        public
+        function timestamp_tz_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1122,7 +1184,8 @@
         }
 
         /** @test */
-        public function timestamp_works()
+        public
+        function timestamp_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1138,7 +1201,8 @@
         }
 
         /** @test */
-        public function timestamps_tz_works()
+        public
+        function timestamps_tz_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1154,9 +1218,9 @@
 
         }
 
-
         /** @test */
-        public function timestamps_works()
+        public
+        function timestamps_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1173,7 +1237,8 @@
         }
 
         /** @test */
-        public function tiny_increments_works()
+        public
+        function tiny_increments_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1191,9 +1256,9 @@
 
         }
 
-
         /** @test */
-        public function tiny_integer_works()
+        public
+        function tiny_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1210,7 +1275,8 @@
         }
 
         /** @test */
-        public function unsigned_big_integer_works()
+        public
+        function unsigned_big_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1227,7 +1293,8 @@
         }
 
         /** @test */
-        public function unsigned_decimal_works()
+        public
+        function unsigned_decimal_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1244,7 +1311,8 @@
         }
 
         /** @test */
-        public function unsigned_integer_works()
+        public
+        function unsigned_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1261,7 +1329,8 @@
         }
 
         /** @test */
-        public function unsigned_medium_integer_works()
+        public
+        function unsigned_medium_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1278,7 +1347,8 @@
         }
 
         /** @test */
-        public function unsigned_small_integer_works()
+        public
+        function unsigned_small_integer_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1295,7 +1365,8 @@
         }
 
         /** @test */
-        public function unsigned_tiny_int_works()
+        public
+        function unsigned_tiny_int_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1312,7 +1383,8 @@
         }
 
         /** @test */
-        public function uuid_morphs_works()
+        public
+        function uuid_morphs_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1329,9 +1401,9 @@
 
         }
 
-
         /** @test */
-        public function uuid_works()
+        public
+        function uuid_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1348,7 +1420,8 @@
         }
 
         /** @test */
-        public function year_works()
+        public
+        function year_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1363,9 +1436,6 @@
 
 
         }
-
-
-
 
         /**
          *
@@ -1386,7 +1456,8 @@
          */
 
         /** @test */
-        public function new_columns_can_be_inserted_after_existing_columns()
+        public
+        function new_columns_can_be_inserted_after_existing_columns()
         {
 
 
@@ -1462,7 +1533,8 @@
         }
 
         /** @test */
-        public function auto_incrementing_works()
+        public
+        function auto_incrementing_works()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1494,7 +1566,8 @@
         }
 
         /** @test */
-        public function charset_can_be_set_for_table_and_column()
+        public
+        function charset_can_be_set_for_table_and_column()
         {
 
 
@@ -1521,7 +1594,8 @@
         }
 
         /** @test */
-        public function collation_can_be_set_for_table_an_column()
+        public
+        function collation_can_be_set_for_table_an_column()
         {
 
             $builder = $this->newTestBuilder();
@@ -1546,7 +1620,8 @@
         }
 
         /** @test */
-        public function comments_can_be_added()
+        public
+        function comments_can_be_added()
         {
 
             $builder = $this->newTestBuilder();
@@ -1567,7 +1642,8 @@
         }
 
         /** @test */
-        public function a_default_value_can_be_set()
+        public
+        function a_default_value_can_be_set()
         {
 
             $builder = $this->newTestBuilder();
@@ -1601,7 +1677,8 @@
         }
 
         /** @test */
-        public function a_column_can_be_added_at_the_first_place()
+        public
+        function a_column_can_be_added_at_the_first_place()
         {
 
             $builder = $this->newTestBuilder();
@@ -1630,7 +1707,8 @@
         }
 
         /** @test */
-        public function a_column_can_be_nullable()
+        public
+        function a_column_can_be_nullable()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -1683,7 +1761,8 @@
         }
 
         /** @test */
-        public function a_stored_column_can_be_created()
+        public
+        function a_stored_column_can_be_created()
         {
 
             $builder = $this->newTestBuilder();
@@ -1731,7 +1810,8 @@
         }
 
         /** @test */
-        public function a_virtual_column_can_be_created()
+        public
+        function a_virtual_column_can_be_created()
         {
 
             $builder = $this->newTestBuilder();
@@ -1780,7 +1860,8 @@
         }
 
         /** @test */
-        public function integers_can_be_unsigned()
+        public
+        function integers_can_be_unsigned()
         {
 
             $builder = $this->newTestBuilder();
@@ -1831,7 +1912,8 @@
         }
 
         /** @test */
-        public function timestamps_can_use_the_current_time_as_default()
+        public
+        function timestamps_can_use_the_current_time_as_default()
         {
 
             $builder = $this->newTestBuilder();
@@ -1893,7 +1975,6 @@
 
         }
 
-
         /**
          *
          *
@@ -1911,7 +1992,8 @@
          */
 
         /** @test */
-        public function test_drop_morphs_works()
+        public
+        function test_drop_morphs_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -1938,7 +2020,8 @@
         }
 
         /** @test */
-        public function test_remember_token_works()
+        public
+        function test_remember_token_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -1964,7 +2047,8 @@
         }
 
         /** @test */
-        public function test_drop_soft_deletes_works()
+        public
+        function test_drop_soft_deletes_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -1989,7 +2073,8 @@
         }
 
         /** @test */
-        public function test_drop_soft_deletes_tz_works()
+        public
+        function test_drop_soft_deletes_tz_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -2014,7 +2099,8 @@
         }
 
         /** @test */
-        public function test_drop_timestamps_works()
+        public
+        function test_drop_timestamps_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -2040,7 +2126,8 @@
         }
 
         /** @test */
-        public function test_drop_timestamps_tz_works()
+        public
+        function test_drop_timestamps_tz_works()
         {
 
             $builder = $this->newTestBuilder();
@@ -2064,7 +2151,6 @@
             assertSame(['id'], $builder->getColumnListing('table1'));
         }
 
-
         /**
          *
          *
@@ -2084,7 +2170,8 @@
          */
 
         /** @test */
-        public function unique_indexes_work()
+        public
+        function unique_indexes_work()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -2113,7 +2200,8 @@
         }
 
         /** @test */
-        public function normal_indexes_work()
+        public
+        function normal_indexes_work()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -2142,7 +2230,8 @@
         }
 
         /** @test */
-        public function a_composite_index_can_be_added()
+        public
+        function a_composite_index_can_be_added()
         {
 
 
@@ -2170,7 +2259,8 @@
         }
 
         /** @test */
-        public function a_primary_key_index_can_be_created()
+        public
+        function a_primary_key_index_can_be_created()
         {
 
 
@@ -2188,7 +2278,8 @@
         }
 
         /** @test */
-        public function an_index_can_be_renamed()
+        public
+        function an_index_can_be_renamed()
         {
 
 
@@ -2213,8 +2304,6 @@
 
         }
 
-
-
         /**
          *
          *
@@ -2234,7 +2323,8 @@
          */
 
         /** @test */
-        public function indexes_can_be_dropped()
+        public
+        function indexes_can_be_dropped()
         {
 
             $builder = $this->newTestBuilder('table1');
@@ -2278,7 +2368,6 @@
 
         }
 
-
         /**
          *
          *
@@ -2296,7 +2385,8 @@
          */
 
         /** @test */
-        public function foreign_key_can_be_created()
+        public
+        function foreign_key_can_be_created()
         {
 
             $builder1 = $this->newTestBuilder('authors');
@@ -2326,9 +2416,9 @@
 
         }
 
-
         /** @test */
-        public function foreign_keys_cascade_correctly_on_update()
+        public
+        function foreign_keys_cascade_correctly_on_update()
         {
 
             $builder1 = $this->newTestBuilder('authors');
@@ -2362,9 +2452,9 @@
 
         }
 
-
         /** @test */
-        public function foreign_keys_cascade_correctly_on_delete()
+        public
+        function foreign_keys_cascade_correctly_on_delete()
         {
 
             $builder1 = $this->newTestBuilder('authors');
@@ -2399,9 +2489,9 @@
 
         }
 
-
         /** @test */
-        public function foreign_keys_can_be_dropped()
+        public
+        function foreign_keys_can_be_dropped()
         {
 
             $builder1 = $this->newTestBuilder('authors');
@@ -2444,30 +2534,6 @@
 
         }
 
-
-        // /** @test */
-        // public function testsdfsdfds()
-        // {
-        //
-        //     global $wpdb;
-        //
-        //     $wp = new WpConnection($wpdb, new SanitizerFactory($wpdb));
-        //
-        //     $builder = new \Illuminate\Database\Query\Builder($wp);
-        //
-        //     $builder->select('*')->from('cities')
-        //             ->where('name', 'London')
-        //             ->orWhere('name', 'Madrid');
-        //
-        //     $results = $wp->select($builder->toSql(), $builder->getBindings());
-        //
-        //
-        //     var_dump($results);
-        //
-        //
-        // }
-
-
         /**
          *
          *
@@ -2483,7 +2549,8 @@
          *
          */
 
-        private function newSchemaBuilder()
+        private
+        function newSchemaBuilder()
         {
 
             global $wpdb;
@@ -2495,8 +2562,10 @@
 
         }
 
-        private function newUserTable(Builder $builder = null)
-        {
+        private
+        function newUserTable(
+            Builder $builder = null
+        ) {
 
 
             $builder = $builder ?? $this->newSchemaBuilder();
@@ -2512,8 +2581,10 @@
 
         }
 
-        private function newTestBuilder($table = null)
-        {
+        private
+        function newTestBuilder(
+            $table = null
+        ) {
 
             global $wpdb;
 
@@ -2596,3 +2667,98 @@
 
 
     }
+
+
+    class SchemaBuilderWpDb implements WpdbInterface
+    {
+
+
+        public $prefix = 'wp_';
+
+        private $queries = [];
+
+        public function getLog() {
+
+            return $this->queries;
+
+        }
+
+        public function doSelect(string $query, array $bindings) : array
+        {
+
+            //
+
+        }
+
+        public function doStatement(string $query, array $bindings) : bool
+        {
+
+            $this->queries[] = Str::replaceArray('?', $bindings, $query);
+
+            return true;
+
+        }
+
+        public function doAffectingStatement($query, array $bindings) : int
+        {
+            //
+        }
+
+        public function doUnprepared(string $query) : bool
+        {
+            //
+        }
+
+        public function doSelectOne($query, $bindings)
+        {
+            //
+        }
+
+        public function doCursorSelect($query, $bindings)
+        {
+            //
+        }
+
+        public function startTransaction()
+        {
+            //
+        }
+
+        public function commitTransaction()
+        {
+            //
+        }
+
+        public function rollbackTransaction($name = null)
+        {
+            //
+        }
+
+        public function createSavepoint(string $name)
+        {
+            //
+        }
+
+
+    }
+
+
+    class TestWpConnection extends WpConnection {
+
+
+        public function __construct(WpdbInterface $wpdb)
+        {
+            parent::__construct($wpdb);
+        }
+
+        public function getLog() {
+
+            return $this->wpdb->getLog();
+
+        }
+
+    }
+
+
+
+
