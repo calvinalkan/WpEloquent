@@ -643,6 +643,23 @@
         }
 
         /** @test */
+        public function begin_transaction_reconnects_on_lost_connection () {
+
+
+                $wp = $this->newWpTransactionConnection();
+
+                $this->wpdb->shouldReceive('startTransaction')->once()->andThrows(new Exception('the server has gone away'));
+                $this->wpdb->shouldReceive('startTransaction');
+                $this->wpdb->shouldReceive('createSavePoint')->once()->with('SAVEPOINT trans1');
+
+                $wp->beginTransaction();
+
+                self::assertSame(1, $wp->transactionLevel());
+
+        }
+
+
+        /** @test */
         public function if_an_exception_occurs_during_the_beginning_of_a_transaction_we_try_once_again(
         )
         {
@@ -855,7 +872,8 @@
         }
 
         /** @test */
-        public function the_transaction_is_rolled_back_to_the_standpoint_if_only_once_savepoint_exists()
+        public function the_transaction_is_rolled_back_to_the_standard_savepoint_if_only_once_savepoint_exists(
+        )
         {
 
 
@@ -876,8 +894,81 @@
 
         }
 
+
         /** @test */
-        public function the_transaction_can_be_rolled_back_completely_when_if_zero_is_provided() {
+        public function the_savepoint_methods_serves_as_an_alias_for_begin_transaction () {
+
+
+            $wp = $this->newWpTransactionConnection();
+
+            $this->wpdb->shouldReceive('startTransaction')->once()->andReturnNull();
+            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans2');
+            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans3');
+            $this->wpdb->shouldReceive('rollbackTransaction')->once()
+                       ->with('ROLLBACK TO SAVEPOINT trans2');
+
+            $wp->beginTransaction();
+            $wp->savepoint();
+            $wp->savepoint();
+
+            // error happens here.
+
+            $wp->rollBack(2);
+
+            self::assertEquals(1, $wp->transactionLevel());
+
+
+        }
+
+
+        /** @test */
+        public function interacting_with_several_custom_savepoints_manually_works()
+        {
+
+            $wp = $this->newWpTransactionConnection();
+
+            $this->wpdb->shouldReceive('startTransaction')->once();
+            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans2');
+
+            $this->wpdb->shouldReceive('rollbackTransaction')->once()->with('ROLLBACK TO SAVEPOINT trans2');
+
+            $wp->beginTransaction();
+
+            $this->wpdb->shouldReceive('doStatement')->once()->andReturnTrue();
+            $this->wpdb->shouldReceive('doStatement')->once()->andThrow(Exception::class);
+
+            try {
+
+                $wp->insert('foobar', ['foo']);
+
+                $wp->savepoint();
+
+                $wp->insert('bizbar', ['foo']);
+
+                $wp->savepoint();
+
+                $wp->update('foobar', ['biz']);
+
+            }
+
+            catch (Exception $e) {
+
+                $wp->rollBack();
+
+                self::assertEquals(1, $wp->transactionLevel());
+
+            }
+
+
+
+
+        }
+
+
+        /** @test */
+        public function the_transaction_can_be_rolled_back_completely_when_if_zero_is_provided(){
 
             $wp = $this->newWpTransactionConnection();
 
@@ -907,9 +998,10 @@
             $this->wpdb->shouldReceive('startTransaction')->once();
             $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
             $this->wpdb->shouldReceive('commitTransaction')->once();
-            $this->wpdb->shouldReceive('doAffectingStatement')->once()->with('foo', ['bar'])->andReturn(3);
+            $this->wpdb->shouldReceive('doAffectingStatement')->once()->with('foo', ['bar'])
+                       ->andReturn(3);
 
-            $result = $wp->transaction( function ( WpConnection $wp) {
+            $result = $wp->transaction(function (WpConnection $wp) {
 
                 return $wp->update('foo', ['bar']);
 
@@ -924,20 +1016,32 @@
         {
 
             $wp = $this->newWpTransactionConnection();
-            $this->wpdb->shouldReceive('startTransaction')->once();
-            $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
-            $this->wpdb->shouldReceive('rollbackTransaction')->once()->with('ROLLBACK TO SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('startTransaction')->times(4);
+            $this->wpdb->shouldReceive('createSavepoint')->times(4)->with('SAVEPOINT trans1');
+
+            $this->wpdb->shouldReceive('rollbackTransaction')->times(3)
+                       ->with('ROLLBACK TO SAVEPOINT trans1');
 
             $this->wpdb->shouldReceive('commitTransaction')->once();
 
-            $this->wpdb->shouldReceive('doAffectingStatement')->once()->andThrow(Exception::class);
-            $this->wpdb->shouldReceive('doAffectingStatement')->once()->with('foo', ['bar'])->andReturn(3);
+            $this->wpdb->shouldReceive('doAffectingStatement')->once()->with('foo', ['bar'])
+                       ->andReturn(3);
 
-            $result = $wp->transaction( function ( WpConnection $wp) {
+            $result = $wp->transaction(function (WpConnection $wp) {
+
+                static $count = 0;
+
+                if ($count != 3) {
+
+                    $count++;
+
+                    throw new Exception();
+
+                }
 
                 return $wp->update('foo', ['bar']);
 
-            }, 2 );
+            }, 4);
 
             self::assertSame(3, $result);
             self::assertSame(0, $wp->transactionLevel());
@@ -945,6 +1049,152 @@
 
         }
 
+        /** @test */
+        public function if_the_query_is_not_successful_after_the_max_attempt_we_throw_an_exception_all_the_way_out()
+        {
+
+            $wp = $this->newWpTransactionConnection();
+            $this->wpdb->shouldReceive('startTransaction')->times(3);
+            $this->wpdb->shouldReceive('createSavepoint')->times(3)->with('SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('rollbackTransaction')->times(2)
+                       ->with('ROLLBACK TO SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('rollbackTransaction')->once()->withNoArgs();
+
+            $this->wpdb->shouldNotReceive('commitTransaction');
+
+            $this->expectExceptionMessage('Database Error');
+
+            $wp->transaction(function () {
+
+                throw new Exception('Database Error');
+
+            }, 3);
+
+            self::assertSame(0, $wp->transactionLevel());
+        }
+
+        /** @test */
+        public function if_we_have_a_concurrency_error_we_retry_until_no_attempts_are_left()
+        {
+
+            $wp = $this->newWpTransactionConnection();
+            $this->wpdb->shouldReceive('startTransaction')->times(1);
+            $this->wpdb->shouldReceive('createSavepoint')->times(1)->with('SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('createSavepoint')->times(1)->with('SAVEPOINT trans2');
+            $this->wpdb->shouldReceive('createSavepoint')->times(1)->with('SAVEPOINT trans3');
+            $this->wpdb->shouldReceive('createSavepoint')->times(1)->with('SAVEPOINT trans4');
+
+            $this->wpdb->shouldNotReceive('rollbackTransaction');
+            $this->wpdb->shouldNotReceive('doAffectingStatement');
+
+
+            $this->expectExceptionMessage('deadlock detected');
+
+             $wp->transaction(function (WpConnection $wp) {
+
+                static $count = 0;
+
+                if ($count < 5 ) {
+
+                    $count++;
+
+                    throw new Exception('deadlock detected');
+
+                }
+
+                return $wp->update('foo', ['bar']);
+
+            }, 4);
+
+            self::assertSame(0, $wp->transactionLevel());
+
+        }
+
+        /** @test */
+        public function concurrency_errors_during_commits_are_retried()
+        {
+
+            $wp = $this->newWpTransactionConnection();
+
+            $this->wpdb->shouldReceive('startTransaction')->once();
+            $this->wpdb->shouldReceive('createSavepoint');
+
+
+            $this->wpdb->shouldReceive('commitTransaction')->twice()->andThrows(new Exception('deadlock detected'));
+            $this->wpdb->shouldReceive('commitTransaction')->once();
+
+
+            $count = $wp->transaction(function ()  {
+
+                static $count = 0;
+
+                $count++;
+
+                return $count;
+
+            },3);
+
+            self::assertSame(3, $count);
+            self::assertSame(0, $wp->transactionLevel());
+
+        }
+
+        /** @test */
+        public function commit_errors_due_to_lost_connections_throw_an_exception() {
+
+
+            $wp = $this->newWpTransactionConnection();
+
+            $this->wpdb->shouldReceive('startTransaction')->once();
+            $this->wpdb->shouldReceive('createSavepoint');
+
+
+            $this->wpdb->shouldReceive('commitTransaction')->once()->andThrows(new Exception('server has gone away'));
+
+
+            $this->expectExceptionMessage('server has gone away');
+
+            $count = $wp->transaction(function ()  {
+
+                static $count = 0;
+
+                $count++;
+
+                return $count;
+
+            },3);
+
+            self::assertNull( $count);
+            self::assertSame(0, $wp->transactionLevel());
+
+
+        }
+        
+        /** @test */
+        public function rollback_exceptions_reset_the_transaction_count_if_its_a_lost_connection()
+        {
+
+            $wp = $this->newWpTransactionConnection();
+
+            $this->wpdb->shouldReceive('startTransaction')->once();
+            $this->wpdb->shouldReceive('createSavepoint');
+
+            $this->wpdb->shouldReceive('rollbackTransaction')
+                       ->with('ROLLBACK TO SAVEPOINT trans1')
+                       ->andThrow( new Exception('server has gone away') );
+
+            $this->expectExceptionMessage('server has gone away');
+
+            $wp->transaction(function ()  {
+
+                throw new Exception();
+
+            },3);
+
+            self::assertSame(0, $wp->transactionLevel());
+
+
+        }
 
 
 

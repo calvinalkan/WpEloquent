@@ -16,7 +16,6 @@
     {
 
 
-
         /**
          * Execute a Closure within a transaction.
          *
@@ -29,10 +28,9 @@
         public function transaction(Closure $callback, $attempts = 1)
         {
 
-            $this->beginTransaction();
-
             for ($currentAttempt = 1; $currentAttempt <= $attempts; $currentAttempt++) {
 
+                $this->beginTransaction();
 
                 // We'll simply execute the given callback within a try / catch block and if we
                 // catch any exception we can rollback this transaction so that none of this
@@ -80,7 +78,7 @@
         public function beginTransaction()
         {
 
-            if ( $this->transaction_count === 0  ) {
+            if ($this->transaction_count === 0) {
 
                 try {
 
@@ -131,13 +129,13 @@
          * @return void
          * @throws Throwable
          */
-        public function rollBack( $to_level = null )
+        public function rollBack($to_level = null)
         {
 
 
             $to_level = $to_level ?? $this->transaction_count;
 
-            if (  $to_level < 0 || $to_level > $this->transaction_count) {
+            if ($to_level < 0 || $to_level > $this->transaction_count) {
 
                 return;
 
@@ -145,13 +143,13 @@
 
             try {
 
-                if ( $to_level === 0  ) {
+                if ($to_level === 0) {
 
                     $this->wpdb->rollbackTransaction();
 
                 }
 
-                if ( $to_level > 0 ) {
+                if ($to_level > 0) {
 
 
                     $this->wpdb->rollbackTransaction(
@@ -166,11 +164,18 @@
             catch (Throwable $e) {
 
                 $this->handleRollBackException($e);
+
             }
 
-            $this->decreaseTransactionCount($to_level -1 ?? null );
+            $this->decreaseTransactionCount($to_level - 1 ?? null);
 
 
+        }
+
+        public function savepoint()
+        {
+
+            $this->beginTransaction();
 
         }
 
@@ -180,26 +185,22 @@
 
 
 
-
-
-
-
-        private function decreaseTransactionCount ($to_level = null ) {
+        private function decreaseTransactionCount($to_level = null)
+        {
 
             $this->transaction_count--;
 
-            if ( $to_level ) {
+            if ($to_level) {
 
                 $this->transaction_count = $to_level;
 
             }
 
-            if ( $this->transaction_count < 0  ) {
+            if ($this->transaction_count < 0) {
 
                 $this->transaction_count = 0;
 
             }
-
 
 
         }
@@ -229,7 +230,7 @@
 
             // If the caused by lost connection, reconnect again and redo transaction
             // wpdb automatically tries to reconnect if we lost the connection.
-            if ($this->wpdb->check_connection(false)) {
+            if ( $this->causedByLostConnection($e) && $this->tryReconnect() ) {
 
 
                 $this->wpdb->startTransaction();
@@ -255,30 +256,40 @@
          * @return void
          * @throws Throwable
          */
-        private function handleTransactionException( Throwable $e, $currentAttempt, $maxAttempts)
+        private function handleTransactionException(Throwable $e, $currentAttempt, $maxAttempts)
         {
 
-            // On a deadlock, MySQL rolls back the entire transaction so we can't just
-            // retry the query. We have to throw this exception all the way out and
-            // let the developer handle it in another way. We will decrement too.
-            if ($this->isConcurrencyError($e) && $this->transaction_count > 1) {
-
-                $this->transaction_count--;
-
-                throw $e;
-
-            }
-
-            // If there was an exception we will rollback this transaction and then we
-            // can check if we have exceeded the maximum attempt count for this and
-            // if we haven't we will return and try this query again in our loop.
-            $this->rollBack();
-
+            // deadlock and attempts left.
+            // MySql rolls everything back.
             if ($this->isConcurrencyError($e) && $currentAttempt < $maxAttempts) {
 
                 return;
 
             }
+
+            // deadlock without attempts left
+            if ($this->isConcurrencyError($e) && ! $currentAttempt < $maxAttempts) {
+
+                $this->transaction_count = 0;
+
+                throw $e;
+
+            }
+
+            // another exception, attempts left,
+            if ( $currentAttempt < $maxAttempts) {
+
+                $this->rollBack(max(1, $this->transaction_count));
+
+                return;
+
+            }
+
+            // another exception, no attempts left,
+
+            $this->rollBack(0);
+            throw $e;
+
 
 
         }
@@ -297,17 +308,16 @@
         private function handleCommitException(Throwable $e, $currentAttempt, $maxAttempts)
         {
 
-            $this->transaction_count = max(0, $this->transaction_count - 1);
-
             if ($this->isConcurrencyError($e) && $currentAttempt < $maxAttempts) {
+
                 return;
+
             }
 
-            if ($this->wpdb->check_connection()) {
+            // Reset transaction count if we lost the connection
+            if ( $this->causedByLostConnection($e) ) {
 
                 $this->transaction_count = 0;
-
-                return;
 
             }
 
@@ -326,7 +336,7 @@
         private function handleRollBackException(Throwable $e)
         {
 
-            if ($this->wpdb->check_connection()) {
+            if ($this->causedByLostConnection($e)) {
 
                 $this->transaction_count = 0;
 
@@ -336,5 +346,11 @@
 
         }
 
+
+        private function tryReconnect () {
+
+            return $this->wpdb->check_connection(false);
+
+        }
 
     }
