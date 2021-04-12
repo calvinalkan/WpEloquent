@@ -76,7 +76,6 @@
          */
         protected $post_processor;
 
-
         /**
          * All of the queries run against the connection.
          *
@@ -105,6 +104,7 @@
          * @var int
          */
         protected $transaction_count = 0;
+
 
 
         /**

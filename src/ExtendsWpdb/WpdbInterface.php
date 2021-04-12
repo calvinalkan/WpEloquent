@@ -8,6 +8,7 @@
      *
      * @property $prefix
      * @property $insert_id
+     * @mixin \wpdb
      *
      */
     interface WpdbInterface
@@ -24,6 +25,14 @@
         public function doSelectOne($query, $bindings) ;
 
         public function doCursorSelect($query, $bindings);
+
+        public function startTransaction();
+
+        public function commitTransaction();
+
+        public function rollbackTransaction(  $name = null );
+
+        public function createSavepoint( string $name );
 
 
     }

@@ -38,4 +38,24 @@
             // TODO: Implement doCursorSelect() method.
         }
 
+        public function startTransaction()
+        {
+            // TODO: Implement startTransaction() method.
+        }
+
+        public function commitTransaction()
+        {
+            // TODO: Implement commitTransaction() method.
+        }
+
+        public function rollbackTransaction($name = null)
+        {
+            // TODO: Implement rollbackTransaction() method.
+        }
+
+        public function createSavepoint(string $name)
+        {
+            // TODO: Implement createSavepoint() method.
+        }
+
     }

@@ -23,12 +23,12 @@
          */
         protected $mysqli;
 
-        public function __construct($db_user, $db_password, $db_name, $db_host)
+        public function __construct($db_user, $db_password, $db_name, $db_host, mysqli $mysqli = null )
         {
 
             parent::__construct($db_user, $db_password, $db_name, $db_host);
 
-            $this->mysqli = $this->dbh;
+            $this->mysqli = $mysqli ?? $this->dbh;
 
 
         }
@@ -38,7 +38,31 @@
         {
 
 
+        }
 
+        public function doStatement(string $query, array $bindings) : bool
+        {
+            // TODO: Implement doStatement() method.
+        }
+
+        public function doAffectingStatement($query, array $bindings) : int
+        {
+            // TODO: Implement doAffectingStatement() method.
+        }
+
+        public function doUnprepared(string $query) : bool
+        {
+            // TODO: Implement doUnprepared() method.
+        }
+
+        public function doSelectOne($query, $bindings)
+        {
+            // TODO: Implement doSelectOne() method.
+        }
+
+        public function doCursorSelect($query, $bindings)
+        {
+            // TODO: Implement doCursorSelect() method.
         }
 
     }
