@@ -6,55 +6,68 @@
     use WpEloquent\ExtendsWpDb\BetterWpDb;
     use WpEloquent\ExtendsWpDb\BetterWpDbQM;
 
+
+
     class Symlinker
     {
 
-        public static function create()
+        public static function create(string $plugin)
         {
 
-            $db = WP_CONTENT_DIR . '/db.php';
 
+            if (self::isInstalledCorrectly()) {
 
-            if ( self::symlinkExists($db) && ! self::queryMonitorActive()) {
+                self::addDependent($plugin);
 
-                update_option('better-wp-db-symlink-created', 0 );
-
-                throw new \Exception('The database drop-in is already symlinked to the file: ' . readlink($db));
+                return;
 
             }
 
-            if ( ! self::symlinkExists($db)  ) {
+            $db = WP_CONTENT_DIR.'/db.php';
 
-                $reflector = new \ReflectionClass(BetterWpDb::class );
-                $is_symlink_to = $reflector->getFileName();
+            if (self::symlinkFromIncompatiblePluginSet($db)) {
 
-                $success = @symlink( $is_symlink_to , $db);
+                throw new \Exception('The database drop-in is already symlinked to the file: '.readlink($db));
 
             }
 
-            if ( self::symlinkExists($db) && self::queryMonitorActive() ) {
-
+            if ( self::symlinkSet($db) && self::queryMonitorActive()) {
 
                 self::replaceQmSymlink($db);
 
+            }
+
+            if ( ! self::symlinkSet($db) ) {
+
+                $reflector = new \ReflectionClass(BetterWpDb::class);
+                symlink($reflector->getFileName(), $db);
 
             }
 
 
-            update_option('better-wp-db-symlink-created', 1 );
+            self::markAsInstalled();
 
+            self::addDependent($plugin);
 
         }
 
-
-        public static function symlinkExists($file) : bool
+        public static function destroy(string $plugin)
         {
 
-            return  file_exists( $file ) &&  is_link($file);
+            $dependent_plugins = self::removeDependent($plugin);
+
+            if (empty($dependent_plugins)) {
+
+                unlink(WP_CONTENT_DIR.'/db.php');
+
+                self::markAsUninstalled();
+
+            }
+
 
         }
 
-        public static function queryMonitorActive() : bool
+        private static function queryMonitorActive() : bool
         {
 
 
@@ -67,11 +80,65 @@
 
             $unlinked = unlink($db);
 
-            $reflector = new \ReflectionClass(BetterWpDbQM::class );
+            $reflector = new \ReflectionClass(BetterWpDbQM::class);
             $is_symlink_to = $reflector->getFileName();
 
-            $success = symlink( $is_symlink_to , $db);
+            $success = symlink($is_symlink_to, $db);
 
+        }
+
+        private static function isInstalledCorrectly() : bool
+        {
+
+            return get_option('better-wp-db-symlink-created') === true;
+
+        }
+
+        private static function addDependent(string $plugin) : void
+        {
+
+            $dependents = get_option('better-wp-db-dependents');
+            $dependents[$plugin] = $plugin;
+
+            update_option('better-wp-db-dependents', $dependents);
+
+        }
+
+        private static function removeDependent(string $plugin)
+        {
+
+            $dependent_plugins = get_option('better-wp-db-dependents');
+
+            unset($dependent_plugins[$plugin]);
+
+            update_option('better-wp-db-dependents', $dependent_plugins);
+
+            return $dependent_plugins;
+
+        }
+
+        private static function markAsInstalled() : void
+        {
+
+            update_option('better-wp-db-symlink-created', true);
+        }
+
+        private static function symlinkFromIncompatiblePluginSet(string $db) : bool
+        {
+
+            return file_exists($db) && is_link($db) && ! self::queryMonitorActive();
+        }
+
+        private static function symlinkSet(string $db) : bool
+        {
+
+            return file_exists($db) && is_link($db);
+        }
+
+        private static function markAsUninstalled() : void
+        {
+
+            update_option('better-wp-db-symlink-created', false);
         }
 
 
