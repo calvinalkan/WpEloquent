@@ -3,10 +3,9 @@
 
     namespace WpEloquent\ExtendsWpdb;
 
-
     use mysqli;
     use WpEloquent\Traits\DelegatesToWpdb;
-
+    use WpEloquent\Traits\PreparesQueries;
 
     /**
      * Class BetterWpDb
@@ -19,6 +18,7 @@
     {
 
         use DelegatesToWpdb;
+        use PreparesQueries;
 
         /**
          * @var mysqli;
@@ -30,7 +30,7 @@
          */
         protected $wpdb;
 
-        public function __construct( mysqli $mysqli , $wpdb )
+        public function __construct(mysqli $mysqli, $wpdb)
         {
 
             $this->wpdb = $wpdb;
@@ -44,11 +44,28 @@
         public function doSelect($query, $bindings) : array
         {
 
+
+
+            $stmt = $this->preparedQuery($query, $bindings);
+
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+
         }
 
         public function doStatement(string $query, array $bindings) : bool
         {
-            // TODO: Implement doStatement() method.
+
+            if (empty($bindings)) {
+
+                $this->mysqli->query($query);
+
+                return true;
+
+            }
+
+            $stmt = $this->preparedQuery($query, $bindings);
+
         }
 
         public function doAffectingStatement($query, array $bindings) : int
