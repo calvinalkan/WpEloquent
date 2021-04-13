@@ -3,20 +3,19 @@
 
     namespace Tests\unit;
 
+    use Codeception\Test\Unit as CodeceptUnit;
     use Exception;
     use Illuminate\Database\Query\Builder;
     use Mockery as m;
-    use PHPUnit\Framework\TestCase;
     use Tests\stubs\FakeWpdb;
     use WpEloquent\ExtendsWpdb\BetterWpDb;
-    use WpEloquent\ExtendsWpdb\WpdbInterface;
     use WpEloquent\MySqlSchemaBuilder;
     use WpEloquent\WpConnection;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
     use Illuminate\Database\Schema\Grammars\MySqlGrammar as MySqlSchemaGrammar;
 
-    class WpConnectionTest extends TestCase
+    class WpConnectionTest extends CodeceptUnit
     {
 
 
@@ -51,6 +50,13 @@
 
         }
 
+
+        /** @test */
+        public function fooTest () {
+
+            self::assertSame('FOO', 'FOO');
+
+        }
 
         /** @test */
         public function constructing_the_wp_connection_correctly_sets_up_all_collaborators()
@@ -390,20 +396,6 @@
         }
 
 
-        /**
-         *
-         *
-         *
-         *
-         *
-         * Logging tests
-         *
-         *
-         *
-         *
-         *
-         */
-
         /** @test */
         public function nothing_gets_executed_in_for_selects()
         {
@@ -601,27 +593,6 @@
         }
 
 
-        /**
-         *
-         *
-         *
-         *
-         *
-         *
-         *
-         *
-         *
-         * Transaction Tests
-         *
-         *
-         *
-         *
-         *
-         *
-         *
-         *
-         */
-
         /** @test */
         public function transaction_level_does_not_increment_when_an_exception_is_thrown()
         {
@@ -630,12 +601,12 @@
 
             $this->wpdb->shouldReceive('check_connection')->andReturnFalse();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
             }
-            catch (TestException $e) {
+            catch (\Tests\stubs\TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
@@ -666,12 +637,12 @@
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
             }
-            catch (TestException $e) {
+            catch (\Tests\stubs\TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
@@ -1169,7 +1140,7 @@
 
 
         }
-        
+
         /** @test */
         public function rollback_exceptions_reset_the_transaction_count_if_its_a_lost_connection()
         {
@@ -1226,13 +1197,6 @@
             return new WpConnection($this->wpdb);
 
         }
-
-
-    }
-
-
-    class TestException extends Exception
-    {
 
 
     }

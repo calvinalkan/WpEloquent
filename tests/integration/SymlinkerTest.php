@@ -4,10 +4,7 @@
     namespace Tests\integration;
 
     use Codeception\TestCase\WPTestCase;
-    use WpEloquent\ExtendsWpdb\BetterWpDb;
-    use WpEloquent\ExtendsWpdb\BetterWpDbQM;
     use WpEloquent\Symlinker;
-
 
 
     class SymlinkerTest extends WPTestCase

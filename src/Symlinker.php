@@ -105,7 +105,6 @@
 
         private static function markAsInstalled() : void
         {
-
             update_option('better-wp-db-symlink-created', true);
         }
 

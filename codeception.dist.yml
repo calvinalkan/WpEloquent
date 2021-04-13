@@ -20,4 +20,9 @@ params:
     - .env.testing
 coverage:
     enabled: true
+    show_uncovered: false
+    low_limit: 70
+    high_limit: 90
+    include:
+        - src/*
 bootstrap: bootstrap.php

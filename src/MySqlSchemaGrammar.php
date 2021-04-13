@@ -8,20 +8,7 @@
     class MySqlSchemaGrammar extends EloquentMySqlGrammar
     {
 
-        public function compileGetColumnType () : string
-        {
 
-            return 'select data_type from information_schema.columns where table_name = ? and column_name = ?';
-
-        }
-
-
-        public function compileGetColumnsByOrdinalPosition () : string
-        {
-
-            return "select column_name FROM information_schema.columns where table_name = ? order by ordinal_position";
-
-        }
 
 
         public function compileGetTableCollation() : string

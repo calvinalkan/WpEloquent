@@ -18,7 +18,8 @@
          * @param  string  $table
          * @param  Closure  $closure
          */
-        public function modify (string $table , Closure $closure) {
+        public function modify(string $table, Closure $closure)
+        {
 
             $this->table($table, $closure);
 
@@ -40,16 +41,20 @@
         public function getColumnsByOrdinalPosition($table)
         {
 
-            $query = $this->grammar->compileGetColumnsByOrdinalPosition();
+            $query = $this->grammar->compileGetFullColumnInfo();
 
             $bindings = [$this->connection->getTablePrefix().$table];
 
-            return $this->connection->runWpDB($query, $bindings, function ($sql_query) {
+            return $this->connection->runWpDB($query, $bindings, function ($query, $bindings ) {
 
 
-                $results = $this->connection->getWpDB()->get_results($sql_query, ARRAY_A);
+                $col_info = collect(
+                    $this->connection->select(
+                        Str::replaceArray('?', $bindings, $query)
+                    )
+                );
 
-                return collect($results)->pluck('COLUMN_NAME')->toArray();
+                return $col_info->pluck('Field')->toArray();
 
 
             });
@@ -64,11 +69,11 @@
 
             $bindings = [$this->connection->getTablePrefix().$table];
 
-            return $this->connection->runWpDB($query, $bindings, function ($sql_query) {
+            return $this->connection->runWpDB($query, $bindings, function ($query, $bindings) {
 
-                $results = $this->connection->getWpDB()->get_row($sql_query, ARRAY_A);
+                $results = $this->connection->select($query, $bindings);
 
-                return $results['Collation'];
+                return $results[0]['Collation'];
 
 
             });
@@ -84,6 +89,7 @@
 
         }
 
+
         public function getFullColumnInfo($table) : array
         {
 
@@ -91,26 +97,20 @@
 
             $binding = $this->connection->getTablePrefix().$table;
 
-            if ($this->hasTable($table)) {
+            return $this->connection->runWpDB($query, [$binding], function ($query, $bindings) {
 
-                return $this->connection->runWpDbUnprepared(
-
-                    str_replace('?', "`".$binding."`", $query), function ($sql) {
-
-                    $col_info =  collect($this->connection->getWpDB()->get_results($sql, ARRAY_A));
-
-                    $field_names = $col_info->pluck('Field');
-
-                    return $field_names->combine($col_info)->toArray();
-
-
-                }
-
+                $col_info = collect(
+                    $this->connection->select(
+                        Str::replaceArray('?', $bindings, $query)
+                    )
                 );
 
-            }
+                $field_names = $col_info->pluck('Field');
 
-            return [];
+                return $field_names->combine($col_info)->toArray();
+
+            });
+
 
         }
 
@@ -123,10 +123,11 @@
          *
          * @return string
          */
-        public function getColumnType( $table,  $column) : string
+        public function getColumnType($table, $column) : string
         {
 
             return $this->getFullColumnInfo($table)[$column]['Type'] ?? '';
 
         }
+
     }

@@ -4,33 +4,33 @@
 
 actor: UnitTester
 modules:
-    enabled:
-        - WPDb
-        - WPLoader
-        - \Helper\Unit
-        - Asserts
-    config:
-        WPDb:
-            dsn: "%FLUSHABLE_DB_DSN%"
-            user:  "%FLUSHABLE_DB_USER%"
-            password: "%FLUSHABLE_DB_PASSWORD%"
-            dump: 'tests/_data/dump.sql'
-            populate: false
-            cleanup: false
-            waitlock: 10
-            originalUrl: "%FLUSHABLE_SITE_WP_URL%"
-            url: "%FLUSHABLE_SITE_WP_URL%"
-            urlReplacement: true
-            tablePrefix: "%FLUSHABLE_TABLE_PREFIX%"
-        WPLoader:
-            loadOnly: false
-            wpRootFolder: "%WP_ROOT_FOLDER%"
-            dbName: "%FLUSHABLE_DB_NAME%"
-            dbHost: "%FLUSHABLE_DB_HOST%"
-            dbUser: "%FLUSHABLE_DB_USER%"
-            dbPassword: "%FLUSHABLE_DB_PASSWORD%"
-            domain: "%TEST_SITE_WP_URL%"
-            tablePrefix: "%FLUSHABLE_TABLE_PREFIX%"
+  enabled:
+    - WPDb
+    - WPLoader
+    - \Helper\Unit
+    - Asserts
+  config:
+    WPDb:
+      dsn: "%FLUSHABLE_DB_DSN%"
+      user: "%FLUSHABLE_DB_USER%"
+      password: "%FLUSHABLE_DB_PASSWORD%"
+      dump: 'tests/_data/dump.sql'
+      populate: false
+      cleanup: false
+      waitlock: 10
+      originalUrl: "%FLUSHABLE_SITE_WP_URL%"
+      url: "%FLUSHABLE_SITE_WP_URL%"
+      urlReplacement: true
+      tablePrefix: "%FLUSHABLE_TABLE_PREFIX%"
+    WPLoader:
+      loadOnly: false
+      wpRootFolder: "%WP_ROOT_FOLDER%"
+      dbName: "%FLUSHABLE_DB_NAME%"
+      dbHost: "%FLUSHABLE_DB_HOST%"
+      dbUser: "%FLUSHABLE_DB_USER%"
+      dbPassword: "%FLUSHABLE_DB_PASSWORD%"
+      domain: "%TEST_SITE_WP_URL%"
+      tablePrefix: "%FLUSHABLE_TABLE_PREFIX%"
 #            plugins: [ 'plugin-stub.php', 'plugin-stub/plugin-stub.php' ]
 #            activatePlugins: [ 'plugin-stub.php', 'plugin-stub/plugin-stub.php' ]
 #
