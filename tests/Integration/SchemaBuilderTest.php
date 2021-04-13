@@ -1,17 +1,16 @@
 <?php
 
 
-    namespace Tests\integration;
+    namespace Tests\Integration;
 
     use Codeception\TestCase\WPTestCase;
     use Illuminate\Database\Query\Expression;
     use Illuminate\Support\Str;
+    use Tests\Stubs\TestSchemaBuilder;
     use WpEloquent\MySqlSchemaBuilder;
     use WpEloquent\WpConnection;
     use Illuminate\Database\Schema\Blueprint;
 
-    use function PHPUnit\Framework\assertSame;
-    use function PHPUnit\Framework\assertTrue;
 
     class SchemaBuilderTest extends WPTestCase
     {
@@ -805,8 +804,8 @@
 
             $builder->seeColumnOfType('created_at', 'timestamp(1)');
             $builder->seeColumnOfType('updated_at', 'timestamp(1)');
-            assertTrue($builder->seeNullableColumn('created_at'));
-            assertTrue($builder->seeNullableColumn('updated_at'));
+            $this->assertTrue($builder->seeNullableColumn('created_at'));
+            $this->assertTrue($builder->seeNullableColumn('updated_at'));
 
         }
 
@@ -824,8 +823,8 @@
 
             $builder->seeColumnOfType('taggable_id', 'bigint unsigned');
             $builder->seeColumnOfType('taggable_type', 'varchar(255)');
-            assertTrue($builder->seeNullableColumn('taggable_id'));
-            assertTrue($builder->seeNullableColumn('taggable_type'));
+            $this->assertTrue($builder->seeNullableColumn('taggable_id'));
+            $this->assertTrue($builder->seeNullableColumn('taggable_type'));
 
         }
 
@@ -843,8 +842,8 @@
 
             $builder->seeColumnOfType('taggable_id', 'char(36)');
             $builder->seeColumnOfType('taggable_type', 'varchar(255)');
-            assertTrue($builder->seeNullableColumn('taggable_id'));
-            assertTrue($builder->seeNullableColumn('taggable_type'));
+            $this->assertTrue($builder->seeNullableColumn('taggable_id'));
+            $this->assertTrue($builder->seeNullableColumn('taggable_type'));
 
 
         }
@@ -1583,7 +1582,7 @@
 
                 $this->tester->haveInDatabase('wp_books', ['id' => 1]);
 
-                assertTrue(true);
+                $this->assertTrue(true);
 
             }
             catch (\PDOException $e) {
@@ -2341,72 +2340,3 @@
     }
 
 
-    /**
-     * Class TestSchemaBuilder
-     *
-     * @see MySqlSchemaBuilder
-     */
-    class TestSchemaBuilder extends MySqlSchemaBuilder
-    {
-
-
-        /**
-         * @var string|null
-         */
-        private $table;
-
-
-        public function __construct($connection, $table = null)
-        {
-
-            $this->table = $table;
-
-            parent::__construct($connection);
-        }
-
-        public function seeColumnOfType($column, $type)
-        {
-
-            $table = $this->table;
-
-            assertTrue($this->hasColumn($table, $column),
-                'Column: '.$column.' not found.');
-            assertSame($type, $this->getColumnType($table, $column),
-                'Column types dont match for column: '.$column);
-
-        }
-
-
-        public function seePrimaryKey($column)
-        {
-
-            $col = $this->getFullColumnInfo($this->table)[$column];
-            assertTrue($col['Key'] === 'PRI');
-
-        }
-
-        public function seeNullableColumn(string $column) : bool
-        {
-
-            $col = $this->getFullColumnInfo($this->table)[$column];
-
-            return $col['Null'] === 'YES';
-        }
-
-        public function seeUniqueColumn(string $column)
-        {
-
-            $col = $this->getFullColumnInfo($this->table)[$column];
-            assertTrue($col['Key'] === 'UNI');
-        }
-
-        public function seeIndexColumn(string $column)
-        {
-
-            $col = $this->getFullColumnInfo($this->table)[$column];
-            assertTrue($col['Key'] === 'MUL');
-
-        }
-
-
-    }

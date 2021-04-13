@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace Tests\unit;
+    namespace Tests\Unit;
 
     use Mockery as m;
     use PHPUnit\Framework\TestCase;

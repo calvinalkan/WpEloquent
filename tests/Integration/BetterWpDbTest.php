@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace Tests\integration;
+    namespace Tests\Integration;
 
     use Codeception\TestCase\WPTestCase;
 

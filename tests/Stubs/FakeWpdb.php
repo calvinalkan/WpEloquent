@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace Tests\stubs;
+    namespace Tests\Stubs;
 
     use WpEloquent\ExtendsWpdb\WpdbInterface;
 

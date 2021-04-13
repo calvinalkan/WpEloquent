@@ -1,7 +1,7 @@
 <?php
 
 
-    namespace Tests\unit;
+    namespace Tests\Unit;
 
     use Codeception\PHPUnit\TestCase;
     use mysqli;

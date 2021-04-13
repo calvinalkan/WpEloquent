@@ -1,13 +1,13 @@
 <?php
 
 
-    namespace Tests\unit;
+    namespace Tests\Unit;
 
     use Codeception\Test\Unit as CodeceptUnit;
     use Exception;
     use Illuminate\Database\Query\Builder;
     use Mockery as m;
-    use Tests\stubs\FakeWpdb;
+    use Tests\Stubs\FakeWpdb;
     use WpEloquent\ExtendsWpdb\BetterWpDb;
     use WpEloquent\MySqlSchemaBuilder;
     use WpEloquent\WpConnection;
@@ -601,12 +601,12 @@
 
             $this->wpdb->shouldReceive('check_connection')->andReturnFalse();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\stubs\TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\Stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
             }
-            catch (\Tests\stubs\TestException $e) {
+            catch (\Tests\Stubs\TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
@@ -637,12 +637,12 @@
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\stubs\TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\Stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
             }
-            catch (\Tests\stubs\TestException $e) {
+            catch (\Tests\Stubs\TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
