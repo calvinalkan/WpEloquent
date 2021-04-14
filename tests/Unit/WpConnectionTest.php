@@ -30,12 +30,10 @@
 
             parent::setUp();
 
-            if ( ! defined('DB_NAME')) {
-                define('DB_NAME', 'wp-eloquent');
-            }
 
             $this->wpdb = m::mock(FakeWpdb::class);
             $this->wpdb->prefix = 'wp_';
+            $this->wpdb->dbname = 'wp_eloquent';
 
 
         }
@@ -51,13 +49,7 @@
         }
 
 
-        /** @test */
-        public function fooTest()
-        {
 
-            self::assertSame('FOO', 'FOO');
-
-        }
 
         /** @test */
         public function constructing_the_wp_connection_correctly_sets_up_all_collaborators()
@@ -1196,6 +1188,7 @@
 
             $this->wpdb = m::mock(FakeWpdb::class);
             $this->wpdb->prefix = 'wp_';
+            $this->wpdb->dbname = 'wp_eloquent';
             $this->wpdb->shouldReceive('check_connection')->andReturn(true)->byDefault();
 
             return new WpConnection($this->wpdb);
@@ -1207,6 +1200,7 @@
 
             $this->wpdb = m::spy(FakeWpdb::class);
             $this->wpdb->prefix = 'wp_';
+            $this->wpdb->dbname = 'wp_';
 
             $connection = new WpConnection($this->wpdb);
 
