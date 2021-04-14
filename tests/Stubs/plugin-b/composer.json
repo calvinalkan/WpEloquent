@@ -1,0 +1,8 @@
+{
+  "name": "plugin-b/stub",
+  "description": "composer.json for testing purposes.",
+  "require": {
+    "calvinalkan/wp-eloquent": "0.1.0"
+  }
+}
+
