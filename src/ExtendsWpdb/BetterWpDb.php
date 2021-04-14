@@ -4,21 +4,17 @@
     namespace WpEloquent\ExtendsWpdb;
 
     use mysqli;
+    use mysqli_result;
     use WpEloquent\Traits\DelegatesToWpdb;
     use WpEloquent\Traits\PreparesQueries;
 
-    /**
-     * Class BetterWpDb
-     *
-     * We need this class in order to access necessary protected properties
-     * of wpdb for which there currently are no getters.
-     *
-     */
+
     class BetterWpDb implements WpdbInterface
     {
 
         use DelegatesToWpdb;
         use PreparesQueries;
+
 
         /**
          * @var mysqli;
@@ -30,12 +26,14 @@
          */
         protected $wpdb;
 
-        public function __construct(mysqli $mysqli, $wpdb)
+        public function __construct( mysqli $mysqli, $wpdb)
         {
 
             $this->wpdb = $wpdb;
 
             $this->mysqli = $mysqli;
+
+            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 
         }
@@ -44,12 +42,11 @@
         public function doSelect($query, $bindings) : array
         {
 
+            $stmt = $this->preparedStatement($query, $bindings);
 
+            $stmt->execute();
 
-            $stmt = $this->preparedQuery($query, $bindings);
-
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC) ?? [];
 
         }
 
@@ -58,55 +55,88 @@
 
             if (empty($bindings)) {
 
-                $this->mysqli->query($query);
+                $result = $this->mysqli->query($query);
 
-                return true;
+                return $result !== false;
 
             }
 
-            $stmt = $this->preparedQuery($query, $bindings);
+            $stmt = $this->preparedStatement($query, $bindings);
+
+            return $stmt->execute();
+
 
         }
 
         public function doAffectingStatement($query, array $bindings) : int
         {
-            // TODO: Implement doAffectingStatement() method.
+
+            if (empty($bindings)) {
+
+                $this->mysqli->query($query);
+
+                return $this->mysqli->affected_rows;
+
+            }
+
+            $this->preparedStatement($query, $bindings)->execute();
+
+            return $this->mysqli->affected_rows;
+
+
         }
 
         public function doUnprepared(string $query) : bool
         {
-            // TODO: Implement doUnprepared() method.
+
+            $result = $this->mysqli->query($query);
+
+            return $result !== false;
+
         }
 
-        public function doSelectOne($query, $bindings)
-        {
-            // TODO: Implement doSelectOne() method.
-        }
 
-        public function doCursorSelect($query, $bindings)
+        public function doCursorSelect($query, $bindings) : mysqli_result
         {
-            // TODO: Implement doCursorSelect() method.
+
+            $statement = $this->preparedStatement($query, $bindings);
+
+            $statement->execute();
+
+            return $statement->get_result();
+
         }
 
         public function startTransaction()
         {
-            // TODO: Implement startTransaction() method.
+            $this->mysqli->begin_transaction();
         }
 
         public function commitTransaction()
         {
-            // TODO: Implement commitTransaction() method.
+            $this->mysqli->commit();
         }
 
         public function rollbackTransaction($name = null)
         {
-            // TODO: Implement rollbackTransaction() method.
+            if ( $name ) {
+
+                $this->mysqli->rollback(0, $name);
+
+            }
+
+            $this->mysqli->rollback();
+
         }
 
         public function createSavepoint(string $name)
         {
-            // TODO: Implement createSavepoint() method.
+            $this->mysqli->savepoint($name);
+
         }
+
+
+
 
     }
 

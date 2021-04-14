@@ -15,6 +15,8 @@
     use Illuminate\Database\QueryException;
     use Illuminate\Support\Arr;
     use Illuminate\Support\Str;
+    use mysqli_result;
+    use mysqli_stmt;
     use Throwable;
     use WpEloquent\ExtendsWpdb\WpdbInterface;
     use WpEloquent\Traits\DetectsConcurrencyErrors;
@@ -106,7 +108,6 @@
         protected $transaction_count = 0;
 
 
-
         /**
          * @var WpDbPdoAdapter
          */
@@ -123,7 +124,7 @@
 
             $this->wpdb = $wpdb;
 
-            $this->db_name = DB_NAME;
+            $this->db_name = $wpdb->dbname;
 
             $this->table_prefix = $wpdb->prefix;
 
@@ -318,13 +319,15 @@
         public function selectOne($query, $bindings = [], $useReadPdo = true)
         {
 
-            return $this->runWpDB($query, $bindings, function ($query, $bindings ) {
+            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
 
                 if ($this->pretending) {
                     return [];
                 }
 
-               return $this->wpdb->doSelectOne($query, $bindings);
+                $result = $this->wpdb->doSelect($query, $bindings);
+
+                return array_shift($result);
 
             }
 
@@ -516,10 +519,12 @@
          *
          * @return Generator
          */
-        public function cursor($query, $bindings = [], $useReadPdo = true)
+        public function cursor($query, $bindings = [], $useReadPdo = true) : Generator
         {
 
-            return $this->runWpDB($query, $bindings, function ($query, $bindings) {
+            /** @var mysqli_result|array $result */
+
+            $result = $this->runWpDB($query, $bindings, function ($query, $bindings) {
 
                 if ($this->pretending) {
                     return [];
@@ -527,10 +532,17 @@
 
                 return $this->wpdb->doCursorSelect($query, $bindings);
 
+            });
+
+
+            if (is_array($result)) return;
+
+
+            while ($record = $result->fetch_assoc()) {
+
+                yield $record;
 
             }
-            );
-
 
         }
 
@@ -557,15 +569,14 @@
 
                 $result = $callback($query, $bindings = $this->prepareBindings($bindings));
 
-
-                if ( $this->logging_queries ) {
+                if ($this->logging_queries) {
 
                     $this->logQuery($query, $bindings, $this->getElapsedTime($start));
 
                 }
 
-
                 return $result;
+
 
             }
             catch (Exception $e) {
@@ -577,7 +588,7 @@
         }
 
 
-        private function isConcurrencyError( Throwable $e) : bool
+        private function isConcurrencyError(Throwable $e) : bool
         {
 
             $message = $e->getMessage();
@@ -600,10 +611,12 @@
          * Determine if the given exception was caused by a lost connection.
          *
          * @param  \Throwable  $e
+         *
          * @return bool
          */
         private function causedByLostConnection(Throwable $e)
         {
+
             $message = $e->getMessage();
 
             return Str::contains($message, [

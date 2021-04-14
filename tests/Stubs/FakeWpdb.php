@@ -28,12 +28,8 @@
             // TODO: Implement doUnprepared() method.
         }
 
-        public function doSelectOne($query, $bindings)
-        {
-            // TODO: Implement doSelectOne() method.
-        }
 
-        public function doCursorSelect($query, $bindings)
+        public function doCursorSelect($query, $bindings) : \mysqli_result
         {
             // TODO: Implement doCursorSelect() method.
         }

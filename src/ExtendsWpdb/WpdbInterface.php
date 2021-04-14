@@ -3,6 +3,8 @@
 
     namespace WpEloquent\ExtendsWpdb;
 
+    use mysqli_result;
+
     /**
      * Interface WpdbInterface
      *
@@ -22,9 +24,7 @@
 
         public function doUnprepared(string $query) : bool;
 
-        public function doSelectOne($query, $bindings) ;
-
-        public function doCursorSelect($query, $bindings);
+        public function doCursorSelect($query, $bindings) : mysqli_result;
 
         public function startTransaction();
 

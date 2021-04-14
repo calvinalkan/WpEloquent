@@ -162,6 +162,27 @@
 
         }
 
+
+        /** @test */
+        public function a_table_can_be_dropped () {
+
+            $this->builder->create('books2', function (Blueprint $table) {
+
+                $table->id();
+                $table->string('email');
+
+            });
+
+            $this->assertTrue($this->builder->hasTable('books2'));
+
+            $this->builder->drop('books2');
+
+            $this->assertFalse($this->builder->hasTable('books2'));
+
+
+        }
+
+
         /** @test */
         public function columns_can_be_dropped()
         {

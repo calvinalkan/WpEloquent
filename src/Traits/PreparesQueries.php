@@ -3,6 +3,8 @@
 
     namespace WpEloquent\Traits;
 
+    use mysqli_stmt;
+
     /**
      * Trait PreparesQueries
      *
@@ -13,7 +15,14 @@
     {
 
 
-        private function preparedQuery($sql, $bindings, $types = "")
+        /**
+         * @param $sql
+         * @param $bindings
+         * @param  string  $types
+         *
+         * @return false|mysqli_stmt
+         */
+        private function preparedStatement($sql, $bindings, $types = "")
         {
 
             $types = $types ? : str_repeat("s", count($bindings));
@@ -24,8 +33,6 @@
                 $stmt->bind_param($types, ...$bindings);
 
             }
-
-            $success = $stmt->execute();
 
             return $stmt;
         }

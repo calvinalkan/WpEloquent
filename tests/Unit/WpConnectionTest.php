@@ -52,7 +52,8 @@
 
 
         /** @test */
-        public function fooTest () {
+        public function fooTest()
+        {
 
             self::assertSame('FOO', 'FOO');
 
@@ -154,12 +155,17 @@
         {
 
 
-            $this->wpdb->shouldReceive('doSelectOne')
+            $this->wpdb->shouldReceive('doSelect')
                        ->once()
                        ->with(
                            "select * from `wp_users` where `user_name` = ? and `id` = ? limit 1",
                            ['calvin', 1])
-                       ->andReturn(['user_id' => 1, 'user_name' => 'calvin']);
+                       ->andReturn([
+
+                           ['user_id' => 1, 'user_name' => 'calvin'],
+                           ['user_id' => 2, 'user_name' => 'marlon']
+
+                           ]);
 
             $wp = $this->newWpConnection();
 
@@ -240,8 +246,7 @@
         }
 
         /** @test */
-        public function an_empty_array_is_returned_if_and_error_occurred_during_a_select_or_no_query_matched(
-        )
+        public function an_empty_array_is_returned_if_and_error_occurred_during_a_select_or_no_query_matched()
         {
 
             $sql = "select `customer_id`, `first_name`, `last_name` from `wp_customer` where `first_name` = ? and `last_name` = ?";
@@ -568,15 +573,25 @@
         public function nothing_gets_executed_for_cursor_selects()
         {
 
+
             $wp = $this->newWpConnectionWithSpy();
 
-            $queries = $wp->pretend(function ($wp) {
+            $queries = $wp->pretend(function (WpConnection $wp) {
 
                 $result1 = $wp->cursor('foo bar', ['baz', true]);
                 $result2 = $wp->cursor('biz baz', ['boo', false]);
 
-                $this->assertSame([], $result1);
-                $this->assertSame([], $result2);
+                foreach ($result1 as $item) {
+
+                    $this->fail('This should not execute');
+
+                }
+                foreach ($result2 as $item) {
+
+                    $this->fail('This should not execute');
+
+                }
+
 
             });
 
@@ -601,7 +616,8 @@
 
             $this->wpdb->shouldReceive('check_connection')->andReturnFalse();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\Stubs\TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()
+                       ->andThrow(\Tests\Stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
@@ -614,30 +630,32 @@
         }
 
         /** @test */
-        public function begin_transaction_reconnects_on_lost_connection () {
+        public function begin_transaction_reconnects_on_lost_connection()
+        {
 
 
-                $wp = $this->newWpTransactionConnection();
+            $wp = $this->newWpTransactionConnection();
 
-                $this->wpdb->shouldReceive('startTransaction')->once()->andThrows(new Exception('the server has gone away'));
-                $this->wpdb->shouldReceive('startTransaction');
-                $this->wpdb->shouldReceive('createSavePoint')->once()->with('SAVEPOINT trans1');
+            $this->wpdb->shouldReceive('startTransaction')->once()
+                       ->andThrows(new Exception('the server has gone away'));
+            $this->wpdb->shouldReceive('startTransaction');
+            $this->wpdb->shouldReceive('createSavePoint')->once()->with('SAVEPOINT trans1');
 
-                $wp->beginTransaction();
+            $wp->beginTransaction();
 
-                self::assertSame(1, $wp->transactionLevel());
+            self::assertSame(1, $wp->transactionLevel());
 
         }
 
 
         /** @test */
-        public function if_an_exception_occurs_during_the_beginning_of_a_transaction_we_try_once_again(
-        )
+        public function if_an_exception_occurs_during_the_beginning_of_a_transaction_we_try_once_again()
         {
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrow(\Tests\Stubs\TestException::class);
+            $this->wpdb->shouldReceive('startTransaction')->once()
+                       ->andThrow(\Tests\Stubs\TestException::class);
 
             try {
                 $wp->beginTransaction();
@@ -650,13 +668,13 @@
         }
 
         /** @test */
-        public function if_we_fail_once_beginning_a_transaction_but_succeed_the_second_time_the_count_is_increased(
-        )
+        public function if_we_fail_once_beginning_a_transaction_but_succeed_the_second_time_the_count_is_increased()
         {
 
             $wp = $this->newWpTransactionConnection();
 
-            $this->wpdb->shouldReceive('startTransaction')->once()->andThrows(new Exception('server has gone away'));
+            $this->wpdb->shouldReceive('startTransaction')->once()
+                       ->andThrows(new Exception('server has gone away'));
             $this->wpdb->shouldReceive('startTransaction')->once()->andReturnNull();
             $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
 
@@ -843,8 +861,7 @@
         }
 
         /** @test */
-        public function the_transaction_is_rolled_back_to_the_standard_savepoint_if_only_once_savepoint_exists(
-        )
+        public function the_transaction_is_rolled_back_to_the_standard_savepoint_if_only_once_savepoint_exists()
         {
 
 
@@ -867,7 +884,8 @@
 
 
         /** @test */
-        public function the_savepoint_methods_serves_as_an_alias_for_begin_transaction () {
+        public function the_savepoint_methods_serves_as_an_alias_for_begin_transaction()
+        {
 
 
             $wp = $this->newWpTransactionConnection();
@@ -903,7 +921,8 @@
             $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans1');
             $this->wpdb->shouldReceive('createSavepoint')->once()->with('SAVEPOINT trans2');
 
-            $this->wpdb->shouldReceive('rollbackTransaction')->once()->with('ROLLBACK TO SAVEPOINT trans2');
+            $this->wpdb->shouldReceive('rollbackTransaction')->once()
+                       ->with('ROLLBACK TO SAVEPOINT trans2');
 
             $wp->beginTransaction();
 
@@ -933,13 +952,12 @@
             }
 
 
-
-
         }
 
 
         /** @test */
-        public function the_transaction_can_be_rolled_back_completely_when_if_zero_is_provided(){
+        public function the_transaction_can_be_rolled_back_completely_when_if_zero_is_provided()
+        {
 
             $wp = $this->newWpTransactionConnection();
 
@@ -1058,14 +1076,13 @@
             $this->wpdb->shouldNotReceive('rollbackTransaction');
             $this->wpdb->shouldNotReceive('doAffectingStatement');
 
-
             $this->expectExceptionMessage('deadlock detected');
 
-             $wp->transaction(function (WpConnection $wp) {
+            $wp->transaction(function (WpConnection $wp) {
 
                 static $count = 0;
 
-                if ($count < 5 ) {
+                if ($count < 5) {
 
                     $count++;
 
@@ -1090,12 +1107,11 @@
             $this->wpdb->shouldReceive('startTransaction')->once();
             $this->wpdb->shouldReceive('createSavepoint');
 
-
-            $this->wpdb->shouldReceive('commitTransaction')->twice()->andThrows(new Exception('deadlock detected'));
+            $this->wpdb->shouldReceive('commitTransaction')->twice()
+                       ->andThrows(new Exception('deadlock detected'));
             $this->wpdb->shouldReceive('commitTransaction')->once();
 
-
-            $count = $wp->transaction(function ()  {
+            $count = $wp->transaction(function () {
 
                 static $count = 0;
 
@@ -1103,7 +1119,7 @@
 
                 return $count;
 
-            },3);
+            }, 3);
 
             self::assertSame(3, $count);
             self::assertSame(0, $wp->transactionLevel());
@@ -1111,7 +1127,8 @@
         }
 
         /** @test */
-        public function commit_errors_due_to_lost_connections_throw_an_exception() {
+        public function commit_errors_due_to_lost_connections_throw_an_exception()
+        {
 
 
             $wp = $this->newWpTransactionConnection();
@@ -1119,13 +1136,12 @@
             $this->wpdb->shouldReceive('startTransaction')->once();
             $this->wpdb->shouldReceive('createSavepoint');
 
-
-            $this->wpdb->shouldReceive('commitTransaction')->once()->andThrows(new Exception('server has gone away'));
-
+            $this->wpdb->shouldReceive('commitTransaction')->once()
+                       ->andThrows(new Exception('server has gone away'));
 
             $this->expectExceptionMessage('server has gone away');
 
-            $count = $wp->transaction(function ()  {
+            $count = $wp->transaction(function () {
 
                 static $count = 0;
 
@@ -1133,9 +1149,9 @@
 
                 return $count;
 
-            },3);
+            }, 3);
 
-            self::assertNull( $count);
+            self::assertNull($count);
             self::assertSame(0, $wp->transactionLevel());
 
 
@@ -1152,22 +1168,20 @@
 
             $this->wpdb->shouldReceive('rollbackTransaction')
                        ->with('ROLLBACK TO SAVEPOINT trans1')
-                       ->andThrow( new Exception('server has gone away') );
+                       ->andThrow(new Exception('server has gone away'));
 
             $this->expectExceptionMessage('server has gone away');
 
-            $wp->transaction(function ()  {
+            $wp->transaction(function () {
 
                 throw new Exception();
 
-            },3);
+            }, 3);
 
             self::assertSame(0, $wp->transactionLevel());
 
 
         }
-
-
 
 
         private function newWpConnection() : WpConnection
@@ -1194,7 +1208,11 @@
             $this->wpdb = m::spy(FakeWpdb::class);
             $this->wpdb->prefix = 'wp_';
 
-            return new WpConnection($this->wpdb);
+            $connection = new WpConnection($this->wpdb);
+
+            return $connection;
+
+            // $connection->cursor('foo', ['bar']);
 
         }
 
