@@ -6,8 +6,12 @@
     use Codeception\Test\Unit as CodeceptUnit;
     use Exception;
     use Illuminate\Database\Query\Builder;
+    use WpEloquent\DatabaseErrorHandler;
+    use WpEloquent\QueryException;
     use Mockery as m;
+    use mysqli_sql_exception;
     use Tests\Stubs\FakeWpdb;
+    use Tests\Stubs\TestException;
     use WpEloquent\ExtendsWpdb\BetterWpDb;
     use WpEloquent\MySqlSchemaBuilder;
     use WpEloquent\WpConnection;
@@ -24,16 +28,21 @@
          */
         private $wpdb;
 
+        /**
+         * @var DatabaseErrorHandler
+         */
+        private $error_handler;
+
 
         protected function setUp() : void
         {
 
             parent::setUp();
 
-
             $this->wpdb = m::mock(FakeWpdb::class);
             $this->wpdb->prefix = 'wp_';
             $this->wpdb->dbname = 'wp_eloquent';
+            $this->error_handler = m::mock(DatabaseErrorHandler::class);
 
 
         }
@@ -47,8 +56,6 @@
             m::close();
 
         }
-
-
 
 
         /** @test */
@@ -155,9 +162,9 @@
                        ->andReturn([
 
                            ['user_id' => 1, 'user_name' => 'calvin'],
-                           ['user_id' => 2, 'user_name' => 'marlon']
+                           ['user_id' => 2, 'user_name' => 'marlon'],
 
-                           ]);
+                       ]);
 
             $wp = $this->newWpConnection();
 
@@ -238,7 +245,7 @@
         }
 
         /** @test */
-        public function an_empty_array_is_returned_if_and_error_occurred_during_a_select_or_no_query_matched()
+        public function an_empty_array_is_returned_if_no_query_matched_a_select()
         {
 
             $sql = "select `customer_id`, `first_name`, `last_name` from `wp_customer` where `first_name` = ? and `last_name` = ?";
@@ -394,7 +401,7 @@
 
 
         /** @test */
-        public function nothing_gets_executed_in_for_selects()
+        public function nothing_gets_executed_for_selects()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -422,7 +429,7 @@
         }
 
         /** @test */
-        public function nothing_gets_executed_in_for_select_one()
+        public function nothing_gets_executed_for_select_one()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -450,7 +457,7 @@
         }
 
         /** @test */
-        public function nothing_gets_executed_in_for_inserts()
+        public function nothing_gets_executed_for_inserts()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -478,7 +485,7 @@
         }
 
         /** @test */
-        public function nothing_gets_executed_in_for_updates()
+        public function nothing_gets_executed_for_updates()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -506,7 +513,7 @@
         }
 
         /** @test */
-        public function nothing_gets_executed_in_for_deletes()
+        public function nothing_gets_executed_for_deletes()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -534,7 +541,7 @@
         }
 
         /** @test */
-        public function nothing_gets_executed_in_for_unprepared_queries()
+        public function nothing_gets_executed_for_unprepared_queries()
         {
 
             $wp = $this->newWpConnectionWithSpy();
@@ -600,8 +607,188 @@
         }
 
 
+        /**
+         *
+         *
+         *
+         *
+         * Exceptions
+         *
+         *
+         *
+         *
+         */
+
         /** @test */
-        public function transaction_level_does_not_increment_when_an_exception_is_thrown()
+        public function errors_get_handled_for_selects()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doSelect')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foobar', $e->getSql());
+                                    $this->assertSame([], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $connection->select('foobar');
+
+
+        }
+
+        /** @test */
+        public function errors_get_handled_for_inserts()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doStatement')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foo', $e->getSql());
+                                    $this->assertSame(['bar'], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $connection->insert('foo', ['bar']);
+
+
+        }
+
+        /** @test */
+        public function errors_get_handled_for_updates()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doAffectingStatement')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foo', $e->getSql());
+                                    $this->assertSame(['bar'], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $connection->update('foo', ['bar']);
+
+
+        }
+
+        /** @test */
+        public function errors_get_handled_for_deletes()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doAffectingStatement')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foo', $e->getSql());
+                                    $this->assertSame(['bar'], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $connection->delete('foo', ['bar']);
+
+
+        }
+
+        /** @test */
+        public function errors_get_handled_for_unprepared()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doUnprepared')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foo', $e->getSql());
+                                    $this->assertSame([], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $connection->unprepared('foo');
+
+
+        }
+
+        /** @test */
+        public function errors_get_handled_for_cursor_selects()
+        {
+
+            $connection = $this->newWpConnection();
+
+            $this->wpdb->shouldReceive('doCursorSelect')
+                       ->once()
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')->once()
+                                ->with(m::on(function (QueryException $e) {
+
+                                    $this->assertSame('foo', $e->getSql());
+                                    $this->assertSame([], $e->getBindings());
+
+                                    return true;
+
+                                }));
+
+            $generator = $connection->cursor('foo');
+
+            foreach ($generator as $foo) {
+
+                $this->fail('No Exception thrown');
+
+            }
+
+        }
+
+        /** @test */
+        public function if_an_exception_was_thrown_during_transaction_begin_we_dont_swallow_the_exception () {
+
+
+
+        }
+
+
+
+
+
+
+
+        /** @test */
+        public function the_transaction_level_does_not_increment_when_an_exception_is_thrown()
         {
 
             $wp = $this->newWpTransactionConnection();
@@ -609,16 +796,29 @@
             $this->wpdb->shouldReceive('check_connection')->andReturnFalse();
 
             $this->wpdb->shouldReceive('startTransaction')->once()
-                       ->andThrow(\Tests\Stubs\TestException::class);
+                       ->andThrow(mysqli_sql_exception::class);
+
+            $this->error_handler->shouldReceive('handle')
+                                ->once()
+                                ->with(m::type(QueryException::class));
 
             try {
+
+
                 $wp->beginTransaction();
-            }
-            catch (\Tests\Stubs\TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
             }
+
+            catch (\Throwable $e ) {
+
+                $this->fail('Unhandled Exception: ' . get_class($e) . ' ' . $e->getMessage() );
+
+            }
+
+
+
         }
 
         /** @test */
@@ -647,12 +847,12 @@
             $wp = $this->newWpTransactionConnection();
 
             $this->wpdb->shouldReceive('startTransaction')->once()
-                       ->andThrow(\Tests\Stubs\TestException::class);
+                       ->andThrow(TestException::class);
 
             try {
                 $wp->beginTransaction();
             }
-            catch (\Tests\Stubs\TestException $e) {
+            catch (TestException $e) {
 
                 $this->assertEquals(0, $wp->transactionLevel());
 
@@ -873,7 +1073,6 @@
 
 
         }
-
 
         /** @test */
         public function the_savepoint_methods_serves_as_an_alias_for_begin_transaction()
@@ -1175,11 +1374,36 @@
 
         }
 
+        /** @test */
+        public function only_mysqli_exceptions_get_handled_by_the_connection_class()
+        {
+
+
+            $this->wpdb->shouldReceive('doSelect')->andThrow(Exception::class);
+
+            $connection = $this->newWpConnection();
+
+            try {
+
+                $connection->select('foo');
+
+                $this->fail();
+
+            }
+
+            catch (Exception $exception) {
+
+                $this->assertNotInstanceOf(QueryException::class, $exception);
+
+            }
+
+        }
+
 
         private function newWpConnection() : WpConnection
         {
 
-            return new WpConnection($this->wpdb);
+            return new WpConnection($this->wpdb, $this->error_handler);
 
         }
 
@@ -1191,7 +1415,7 @@
             $this->wpdb->dbname = 'wp_eloquent';
             $this->wpdb->shouldReceive('check_connection')->andReturn(true)->byDefault();
 
-            return new WpConnection($this->wpdb);
+            return new WpConnection($this->wpdb, $this->error_handler);
 
         }
 
@@ -1202,11 +1426,8 @@
             $this->wpdb->prefix = 'wp_';
             $this->wpdb->dbname = 'wp_';
 
-            $connection = new WpConnection($this->wpdb);
+            return new WpConnection($this->wpdb);
 
-            return $connection;
-
-            // $connection->cursor('foo', ['bar']);
 
         }
 

@@ -5,8 +5,10 @@
 
     use Closure;
     use Illuminate\Database\Query\Grammars\MySqlGrammar;
+    use mysqli_sql_exception;
     use Throwable;
     use WpEloquent\ExtendsWpdb\WpdbInterface;
+    use WpEloquent\QueryException;
 
     /**
      * @property WpdbInterface $wpdb
@@ -44,7 +46,7 @@
                     // If we catch an exception we'll rollback this transaction and try again if we
                     // are not out of attempts. If we are out of attempts we will just throw the
                     // exception back out and let the developer handle an uncaught exceptions
-                catch (Throwable $e) {
+                catch ( Throwable $e) {
 
                     $this->handleTransactionException($e, $currentAttempt, $attempts);
 
@@ -86,7 +88,7 @@
 
                 }
 
-                catch (Throwable $e) {
+                catch ( mysqli_sql_exception $e) {
 
                     $this->handleBeginTransactionException($e);
 
@@ -219,12 +221,12 @@
         /**
          * Handle an exception from a transaction beginning.
          *
-         * @param  Throwable  $e
+         * @param  mysqli_sql_exception  $e
          *
          * @return void
-         * @throws Throwable
+         * @throws QueryException
          */
-        private function handleBeginTransactionException(Throwable $e)
+        private function handleBeginTransactionException(mysqli_sql_exception $e)
         {
 
             // If the caused by lost connection, reconnect again and redo transaction
@@ -239,8 +241,8 @@
             }
 
             // If we can reconnect with wpdb or if we cant start the transaction a second time,
-            // throw out the exception
-            throw $e;
+            // throw out the exception to the error handler
+           throw $e;
 
         }
 

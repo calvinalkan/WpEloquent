@@ -4,9 +4,9 @@
     namespace Tests\Unit;
 
     use Mockery as m;
+    use mysqli_sql_exception;
     use PHPUnit\Framework\TestCase;
     use WpEloquent\ExtendsWpdb\BetterWpDb;
-
 
     class BetterWpDbDelegationTest extends TestCase
     {
@@ -168,6 +168,58 @@
 
         }
 
+        /** @test */
+        public function exceptions_resulting_from_magic_methods_calls_always_get_handled_by_the_default_wpdb_class()
+        {
+
+            try {
+
+                $this->assertFalse($this->wpdb->called('print_error'));
+
+                $this->better_wpdb->query('foo');
+
+                $this->assertTrue($this->wpdb->called('print_error'));
+
+
+            }
+
+            catch ( mysqli_sql_exception $e) {
+
+                $this->fail('mysqli_sql_exception was thrown when it should not. ');
+
+            }
+
+
+        }
+
+        /** @test */
+        public function exceptions_from_better_wpdb_method_calls_do_not_get_handled_by_the_default_wpdb_class()
+        {
+
+
+            $this->mysqli
+                ->shouldReceive('prepare')
+                ->andThrow(new mysqli_sql_exception('Cant prepare statement'));
+
+            try {
+
+                $this->better_wpdb->doSelect('foo', ['bar']);
+
+                $this->fail('Exception was not handled correctly');
+
+            }
+            catch (mysqli_sql_exception $e) {
+
+              $this->assertInstanceOf(mysqli_sql_exception::class, $e);
+              $this->assertSame('Cant prepare statement', $e->getMessage());
+              $this->assertFalse($this->wpdb->called('print_error'));
+
+            }
+
+
+        }
+
+
 
     }
 
@@ -178,6 +230,8 @@
         public    $show_errors       = false;
         protected $reconnect_retries = 5;
         private   $has_connected     = false;
+
+        private $called = [];
 
         public function __get($name)
         {
@@ -209,6 +263,26 @@
         {
 
             throw new \Exception('protected method check_safe_collation() called.');
+
+        }
+
+        public function print_error()
+        {
+
+            $this->called['print_error'] = 'print_error';
+
+        }
+
+        public function query($string)
+        {
+
+            throw new mysqli_sql_exception();
+
+        }
+
+        public function called ($method) {
+
+             return isset($this->called[$method]);
 
         }
 

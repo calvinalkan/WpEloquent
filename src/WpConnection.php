@@ -5,21 +5,19 @@
 
     use Closure;
     use DateTime;
-    use Exception;
     use Generator;
     use Illuminate\Database\Grammar;
     use Illuminate\Database\Query\Builder as QueryBuilder;
     use Illuminate\Database\Query\Expression;
     use Illuminate\Database\Query\Grammars\MySqlGrammar as MySqlQueryGrammar;
     use Illuminate\Database\Query\Processors\MySqlProcessor;
-    use Illuminate\Database\QueryException;
+    use WpEloquent\QueryException;
     use Illuminate\Support\Arr;
     use Illuminate\Support\Str;
     use mysqli_result;
-    use mysqli_stmt;
+    use mysqli_sql_exception;
     use Throwable;
     use WpEloquent\ExtendsWpdb\WpdbInterface;
-    use WpEloquent\Traits\DetectsConcurrencyErrors;
     use WpEloquent\Traits\LogsQueries;
     use WpEloquent\Traits\ManagesTransactions;
 
@@ -113,13 +111,19 @@
          */
         private $wpdb_to_pdo_adapter;
 
+        /**
+         * @var DatabaseErrorHandler
+         */
+        private $error_handler;
+
 
         /**
          * Create a new database connection instance.
          *
          * @param  WpdbInterface  $wpdb
+         * @param  DatabaseErrorHandler|null  $error_handler
          */
-        public function __construct(WpdbInterface $wpdb)
+        public function __construct(WpdbInterface $wpdb, DatabaseErrorHandler $error_handler = null)
         {
 
             $this->wpdb = $wpdb;
@@ -136,6 +140,7 @@
 
             $this->wpdb_to_pdo_adapter = new WpDbPdoAdapter($wpdb);
 
+            $this->error_handler = $error_handler ?? new DatabaseErrorHandler();
 
         }
 
@@ -345,8 +350,9 @@
          * @param  bool  $useReadPdo
          *
          * @return array
+         * @throws \WpEloquent\QueryException
          */
-        public function select($query, $bindings = [], $useReadPdo = true) : array
+        public function select($query, $bindings = [], $useReadPdo = true)
         {
 
             return $this->runWpDB($query, $bindings, function ($query, $bindings) {
@@ -379,8 +385,9 @@
          * @param  array  $bindings
          *
          * @return bool
+         * @throws \WpEloquent\QueryException
          */
-        public function insert($query, $bindings = []) : bool
+        public function insert($query, $bindings = [])
         {
 
             return $this->statement($query, $bindings);
@@ -395,8 +402,9 @@
          * @param  array  $bindings
          *
          * @return int
+         * @throws \WpEloquent\QueryException
          */
-        public function update($query, $bindings = []) : int
+        public function update($query, $bindings = [])
         {
 
             return $this->affectingStatement($query, $bindings);
@@ -409,8 +417,9 @@
          * @param  array  $bindings
          *
          * @return int
+         * @throws \WpEloquent\QueryException
          */
-        public function delete($query, $bindings = []) : int
+        public function delete($query, $bindings = [])
         {
 
             return $this->affectingStatement($query, $bindings);
@@ -425,8 +434,9 @@
          * @param  array  $bindings
          *
          * @return bool
+         * @throws \WpEloquent\QueryException
          */
-        public function statement($query, $bindings = []) : bool
+        public function statement($query, $bindings = [])
         {
 
             return $this->runWpDB($query, $bindings, function ($query, $bindings) {
@@ -451,8 +461,9 @@
          * @param  array  $bindings
          *
          * @return int
+         * @throws \WpEloquent\QueryException
          */
-        public function affectingStatement($query, $bindings = []) : int
+        public function affectingStatement($query, $bindings = [])
         {
 
             return $this->runWpDB($query, $bindings, function ($query, $bindings) {
@@ -489,8 +500,9 @@
          * @param  string  $query
          *
          * @return bool
+         * @throws \WpEloquent\QueryException
          */
-        public function unprepared($query) : bool
+        public function unprepared($query)
         {
 
             return $this->runWpDB($query, [], function ($query) {
@@ -500,6 +512,7 @@
                 }
 
                 return $this->wpdb->doUnprepared($query);
+
 
             });
 
@@ -534,9 +547,10 @@
 
             });
 
-
-            if (is_array($result)) return;
-
+            // $result can be null if runWpDb catches an exception.
+            if (is_array($result) || ! $result) {
+                return;
+            }
 
             while ($record = $result->fetch_assoc()) {
 
@@ -564,26 +578,30 @@
             // run the SQL against the wpdb class .
             try {
 
-
-                $start = microtime(true);
-
-                $result = $callback($query, $bindings = $this->prepareBindings($bindings));
-
-                if ($this->logging_queries) {
-
-                    $this->logQuery($query, $bindings, $this->getElapsedTime($start));
-
-                }
-
-                return $result;
-
+                return $this->runWithoutExceptions($query, $bindings = $this->prepareBindings($bindings) , $callback);
 
             }
-            catch (Exception $e) {
+            catch (mysqli_sql_exception $e) {
 
-                throw new QueryException($query, $bindings, $e);
+                $this->error_handler->handle(new QueryException($query, $bindings, $e));
 
             }
+
+        }
+
+        private function runWithoutExceptions(string $query, array $bindings, Closure $callback) {
+
+            $start = microtime(true);
+
+            $result = $callback($query, $bindings);
+
+            if ($this->logging_queries) {
+
+                $this->logQuery($query, $bindings, $this->getElapsedTime($start));
+
+            }
+
+            return $result;
 
         }
 

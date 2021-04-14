@@ -15,3 +15,8 @@
 
 
 
+
+
+    throw new Exception('foo message');
+
+

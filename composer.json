@@ -28,7 +28,8 @@
     "phpunit/phpunit": "^9.0",
     "mockery/mockery": "^1.4.2",
     "lucatume/wp-browser": "dev-better-env-names",
-    "nesbot/carbon": "^2.46"
+    "nesbot/carbon": "^2.46",
+    "brain/monkey": "^2.6"
 
   },
   "license": "GPL-2.0-or-later",
