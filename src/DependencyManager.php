@@ -1,163 +1,148 @@
 <?php
 
 
-    namespace WpEloquent;
+	namespace WpEloquent;
 
-    class DependencyManager
-    {
+	class DependencyManager {
 
 
-        /**
-         * @var array
-         */
-        private $dependents;
-        /**
-         * @var CompatibilityManager
-         */
-        private $compatibility_manager;
+		/**
+		 * @var array
+		 */
+		private $dependents;
+		/**
+		 * @var CompatibilityManager
+		 */
+		private $compatibility_manager;
 
-        public function __construct(CompatibilityManager $compatibility_manager = null )
-        {
+		public function __construct( CompatibilityManager $compatibility_manager = null ) {
 
-            $this->dependents = $this->getAll();
+			$this->dependents = $this->all();
 
-            $this->compatibility_manager = $compatibility_manager ?? new CompatibilityManager($this->buildPlugins());
+			$this->compatibility_manager = $compatibility_manager ?? new CompatibilityManager( $this->buildPlugins() );
 
-        }
+		}
 
-        public function add($plugin_id)
-        {
+		public function add( string $plugin_id ) {
 
-            if (is_int($this->index($plugin_id))) {
+			if ( $this->alreadyAdded( $plugin_id ) ) {
 
-                return;
+				return;
 
-            }
+			}
 
-            $plugin = new DependentPlugin($plugin_id);
+			$plugin = new DependentPlugin( $plugin_id );
 
-            $this->compatibility_manager->checkFor($plugin);
+			$this->compatibility_manager->isCompatible( $plugin );
 
-            $this->markInDatabase($plugin);
+			$this->markInDatabase( $plugin );
 
-            $this->symlink($plugin);
+			$this->symlink( $this->compatibility_manager->newOptimalVersion() );
 
 
-        }
+		}
 
-        public function getAll()
-        {
+		public function all() {
 
-            return get_option('better-wp-db-dependents', []);
+			return get_option('better-wp-db-dependents', []);
 
 
-        }
+		}
 
-        public function remove($plugin_id)
-        {
+		public function remove( string $plugin_id ) {
 
-            if (is_int($key = $this->index($plugin_id))) {
+			if ( is_int( $index = $this->index( $plugin_id ) ) ) {
 
+				$this->removeDependent( $index )
+				     ->replaceWith( $this->compatibility_manager->newOptimalVersion() )
+				     ->refresh();
 
-                $this->removeDependent($key)
-                     ->replaceWith($this->getNext())
-                     ->refresh();
+			}
 
-            }
+		}
 
+		private function index( $plugin_id ) {
 
-        }
+			return array_search( $plugin_id, $this->dependents, true );
 
-        private function getNext() : ?DependentPlugin
-        {
+		}
 
-            if (count($this->dependents)) {
+		private function symlink( DependentPlugin $plugin ) {
 
-                return new DependentPlugin(array_values($this->dependents)[0]);
+			( new Symlink() )->createFor( $plugin );
 
-            }
+		}
 
-            return null;
+		private function markInDatabase( DependentPlugin $plugin ) {
 
-        }
+			$this->dependents[] = $plugin->getId();
 
-        private function index($plugin_id)
-        {
+			update_option( 'better-wp-db-dependents', $this->dependents );
 
-            return array_search($plugin_id, $this->dependents, true);
+		}
 
-        }
+		private function removeDependent( $index ) : DependencyManager {
 
-        private function symlink(DependentPlugin $plugin)
-        {
+			$plugin = new DependentPlugin( $this->dependents[ $index ] );
 
-            (new Symlink())->createFor($plugin);
+			unset( $this->dependents[ $index ] );
 
-        }
+			( new Symlink() )->removeFor( $plugin );
 
-        private function markInDatabase(DependentPlugin $plugin)
-        {
+			$this->compatibility_manager->forget( $plugin );
 
-            $this->dependents[] = $plugin->getId();
+			return $this;
 
-            update_option('better-wp-db-dependents', $this->dependents);
+		}
 
-        }
+		private function refresh() {
 
-        private function removeDependent($index)
-        {
+			$this->dependents = array_values( $this->dependents );
 
-            $plugin = new DependentPlugin($this->dependents[$index]);
+			if ( count( $this->dependents ) ) {
 
-            unset($this->dependents[$index]);
+				update_option( 'better-wp-db-dependents', $this->dependents );
 
-            (new Symlink())->removeFor($plugin);
+				return;
+			}
 
-            return $this;
+			delete_option( 'better-wp-db-dependents' );
 
-        }
 
-        private function refresh()
-        {
+		}
 
-            $this->dependents = array_values($this->dependents);
+		private function replaceWith( $plugin ) {
 
-            if ( count ( $this->dependents )) {
+			if ( $plugin ) {
 
-                update_option('better-wp-db-dependents', $this->dependents);
+				( new Symlink() )->createFor( $plugin );
 
-                return;
-            }
+			}
 
-            delete_option('better-wp-db-dependents');
+			return $this;
 
+		}
 
-        }
+		private function buildPlugins() {
 
-        private function replaceWith($plugin)
-        {
+			$plugins = array_map( function ( $plugin_id ) {
 
-            if ($plugin) {
+				return new DependentPlugin( $plugin_id );
 
-                (new Symlink())->createFor($plugin);
+			}, $this->dependents );
 
-            }
+			return $plugins;
 
-            return $this;
+		}
 
-        }
+		/**
+		 * @param $plugin_id
+		 *
+		 * @return bool
+		 */
+		private function alreadyAdded( $plugin_id ) : bool {
 
-        private function buildPlugins()
-        {
+			return is_int( $this->index( $plugin_id ) );
+		}
 
-            $plugins = array_map(function ($plugin_id) {
-
-               return new DependentPlugin($plugin_id);
-
-            }, $this->dependents);
-
-            return $plugins;
-
-        }
-
-    }
+	}

@@ -18,6 +18,7 @@
 
         private $plugin_b = 'plugin-b/vendor';
 
+        private $plugin_c =  'plugin-c/vendor';
 
         private $dependency_manager;
 
@@ -132,11 +133,11 @@
 
             $this->dependency_manager->add($this->plugin_a);
 
-            $before = $this->dependency_manager->getAll();
+            $before = $this->dependency_manager->all();
 
             $this->dependency_manager->add($this->plugin_a);
 
-            $after = $this->dependency_manager->getAll();
+            $after = $this->dependency_manager->all();
 
             $this->assertEquals($before, $after);
 
@@ -152,7 +153,7 @@
             $this->assertMarkedInstalled($this->plugin_a);
             $this->assertMarkedInstalled($this->plugin_b);
 
-            $this->assertSymlinkFor($this->plugin_a);
+            $this->assertSymlinkFor($this->plugin_b);
 
             $this->dependency_manager->remove($this->plugin_a);
 
@@ -175,6 +176,54 @@
 
         }
 
+		/** @test */
+	    public function when_a_compatible_plugin_with_a_higher_version_number_is_activated_the_symlink_gets_swapped( ) {
+
+
+		    $this->dependency_manager->add($this->plugin_a);
+		    $this->dependency_manager->add($this->plugin_b);
+
+		    $this->assertMarkedInstalled($this->plugin_a);
+		    $this->assertMarkedInstalled($this->plugin_b);
+
+		    $this->assertSymlinkFor($this->plugin_b);
+
+
+		}
+
+		/** @test */
+	    public function the_symlink_stays_the_same_when_a_compatible_plugin_with_lower_version_is_added() {
+
+
+		    $this->dependency_manager->add($this->plugin_b);
+		    $this->dependency_manager->add($this->plugin_c);
+		    $this->dependency_manager->add($this->plugin_a);
+
+		    $this->assertMarkedInstalled($this->plugin_a);
+		    $this->assertMarkedInstalled($this->plugin_b);
+		    $this->assertMarkedInstalled($this->plugin_c);
+
+		    $this->assertSymlinkFor($this->plugin_b);
+
+
+	    }
+
+	    /** @test */
+	    public function the_next_highest_symlink_gets_created_when_the_highest_dependent_gets_removed() {
+
+		    $this->dependency_manager->add($this->plugin_b);
+		    $this->dependency_manager->add($this->plugin_a);
+		    $this->dependency_manager->add($this->plugin_c);
+
+		    $this->assertMarkedInstalled($this->plugin_a);
+		    $this->assertMarkedInstalled($this->plugin_b);
+		    $this->assertMarkedInstalled($this->plugin_c);
+
+		    $this->dependency_manager->remove($this->plugin_b);
+
+		    $this->assertSymlinkFor($this->plugin_c);
+
+		}
 
 
 
@@ -245,14 +294,14 @@
         private function assertMarkedInstalled($plugin_id)
         {
 
-            $this->assertContains($plugin_id, $this->dependency_manager->getAll());
+            $this->assertContains($plugin_id, $this->dependency_manager->all());
 
         }
 
         private function assertNotMarkedInstalled($plugin_id)
         {
 
-            $this->assertNotContains($plugin_id, $this->dependency_manager->getAll());
+            $this->assertNotContains($plugin_id, $this->dependency_manager->all());
 
         }
 

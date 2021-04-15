@@ -57,16 +57,6 @@
 
         }
 
-        protected function tearDown() : void
-        {
-
-            parent::tearDown();
-
-            $this->deleteTestPluginDirectory();
-
-
-        }
-
         /** @test */
         public function an_exception_gets_thrown_when_the_composer_lock_file_cant_be_parsed()
         {
@@ -146,9 +136,9 @@
 
             try {
 
-                $compatible = $manager->checkFor(new DependentPlugin($this->plugin_b));
+                $compatible = $manager->isCompatible(new DependentPlugin($this->plugin_b));
 
-                $this->assertTrue(true);
+                $this->assertTrue($compatible);
 
             }catch (\Exception $e) {
 
@@ -167,7 +157,7 @@
 
                 $manager = $this->newCompatibilityManager([$this->plugin_b, $this->plugin_c]);
 
-                $manager->checkFor(new DependentPlugin($this->plugin_a));
+                $manager->isCompatible(new DependentPlugin($this->plugin_a));
 
                 $this->fail('Lower version number was added.');
 
@@ -192,7 +182,7 @@
 
                 $manager = $this->newCompatibilityManager([$this->plugin_a, $this->plugin_b, $this->plugin_c]);
 
-                $manager->checkFor(new DependentPlugin($this->plugin_major));
+                $manager->isCompatible(new DependentPlugin($this->plugin_major));
 
                 $this->fail('Major version number was added.');
 
@@ -206,6 +196,9 @@
             }
 
         }
+
+
+
 
         private function createTestPluginDirectory()
         {
@@ -233,21 +226,7 @@
 
         }
 
-        private function deleteTestPluginDirectory()
-        {
-
-            // $unlinkedA = unlink(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-a');
-            // $unlinkedB = unlink(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-b');
-            // $unlinkedB = unlink(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-b');
-            // $unlinkedB = unlink(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-b');
-            //
-            // self::assertTrue($unlinkedA);
-            // self::assertTrue($unlinkedB);
-
-        }
-
-        private function newCompatibilityManager($plugins = [])
-        {
+        private function newCompatibilityManager($plugins = []) : CompatibilityManager {
 
             $plugins = Arr::wrap($plugins);
 

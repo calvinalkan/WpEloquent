@@ -21,10 +21,6 @@
         private $versions;
 
 
-        /** @var PluginFile */
-        private $plugin_file;
-
-
         /**
          * CompatibilityManager constructor.
          *
@@ -34,21 +30,29 @@
          *
          * @param  array  $existing_plugins
          */
-        public function __construct(array $existing_plugins = [], PluginFile $plugin_file = null)
+        public function __construct( array $existing_plugins = [] )
         {
 
             $this->existing_plugins = $existing_plugins;
-            $this->plugin_file = $plugin_file ?? new PluginFile();
             $this->versions = $this->parseVersions();
+            $this->version_storage = $this->versionStorage();
+
         }
 
-        public function checkFor(DependentPlugin $plugin)
-        {
+	    /**
+	     * @param  DependentPlugin  $plugin
+	     *
+	     * @return bool
+	     * @throws CompatibilityException
+	     * @throws ConfigurationException
+	     */
+	    public function isCompatible( DependentPlugin $plugin) : bool {
 
-            $version = $this->getRequiredVersion($plugin);
+            $version = $plugin->requiredVersion();
 
             if ( ! count($this->versions)) {
 
+	            $this->version_storage[$version] = $plugin;
                 return true;
 
             }
@@ -56,50 +60,58 @@
             $this->compareMinimum($version);
             $this->compareMaximum($version);
 
-        }
+            $this->version_storage[$version] = $plugin;
 
-        private function getRequiredVersion($plugin)
-        {
-
-
-            $composer_config = $this->plugin_file->getComposerPackages($plugin);
-
-            $packages = collect($composer_config['packages']);
-
-            $version = collect(
-                $packages->firstWhere('name', 'calvinalkan/wp-eloquent')
-            )->only('version')->first();
-
-            if ( ! $version) {
-
-                throw new ConfigurationException(
-                    'A composer.lock file was found but the required version number could not be parsed.'
-                );
-
-            }
-
-            return $version;
+            return true;
 
 
         }
+
+	    public function requiredVersions() : array
+	    {
+
+		    return $this->versions;
+
+	    }
+
+	    public function newOptimalVersion() {
+
+	    	if ( count($this->version_storage)) {
+
+			    $high_to_low = Semver::rsort(array_keys($this->version_storage));
+
+			    return $this->version_storage[$high_to_low[0]];
+
+		    }
+
+	    }
+
+	    public function forget ( DependentPlugin $plugin ) {
+
+	    	if ( $key = array_search($plugin, $this->version_storage)) {
+
+	    		unset($this->version_storage[$key]);
+
+		    }
+
+	    }
 
         private function parseVersions()
         {
 
             $versions = array_map(function (DependentPlugin $plugin) {
 
-                return $this->getRequiredVersion($plugin);
+                return $plugin->requiredVersion();
 
             }, $this->existing_plugins);
 
-            return Semver::sort($versions);
+            return $this->sortLowToHigh($versions);
 
         }
 
-        public function requiredVersions() : array
-        {
+        private function sortLowToHigh (array $versions ) {
 
-            return $this->versions;
+	        return Semver::sort($versions);
 
         }
 
@@ -145,5 +157,19 @@
 
 
         }
+
+	    private function versionStorage() : array {
+
+        	$storage = collect($this->existing_plugins)->flatMap(function (DependentPlugin $plugin) {
+
+        		return [ $plugin->requiredVersion() =>  $plugin];
+
+	        });
+
+        	return $storage->toArray();
+
+	    }
+
+
 
     }

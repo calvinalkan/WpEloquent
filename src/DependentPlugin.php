@@ -3,7 +3,6 @@
 
     namespace WpEloquent;
 
-    use Symfony\Component\Finder\Finder;
 
     class DependentPlugin
     {
@@ -54,5 +53,26 @@
             return $this->id;
         }
 
+		public function requiredVersion () {
+
+			$composer_config = $this->plugin_file->getComposerPackages($this);
+
+			$packages = collect($composer_config['packages']);
+
+			$version = collect(
+				$packages->firstWhere('name', 'calvinalkan/wp-eloquent')
+			)->only('version')->first();
+
+			if ( ! $version ) {
+
+				throw new ConfigurationException(
+					'A composer.lock file was found but the required version number could not be parsed.'
+				);
+
+			}
+
+			return $version;
+
+		}
 
     }
