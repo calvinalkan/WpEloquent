@@ -29,7 +29,6 @@
 
             $this->db_drop_in_path = WP_CONTENT_DIR.$this->ds.'db.php';
 
-
         }
 
 
@@ -60,7 +59,7 @@
 
             $this->markAsInstalled();
 
-            $this->dependent->add();;
+            $this->dependent->add();
 
         }
 
@@ -80,6 +79,12 @@
 
             $this->markAsUninstalled();
 
+        }
+
+        public function dependent() : DependentPlugin
+        {
+
+            return $this->dependent;
         }
 
         private function queryMonitorActive() : bool
@@ -120,7 +125,6 @@
 
             update_option('better-wp-db-symlink-created', false);
         }
-
 
 
 

@@ -13,8 +13,6 @@
          */
         private $id;
 
-
-
         /**
          * @var string
          */
@@ -26,8 +24,8 @@
         {
 
             $this->id = $id;
+            $this->vendor_folder = WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.$id;
 
-            $this->vendor_folder = WP_CONTENT_DIR. DIRECTORY_SEPARATOR .'plugins'. DIRECTORY_SEPARATOR .$id;
 
         }
 
@@ -52,24 +50,25 @@
         public function remove()
         {
 
-            $dependent_plugins = get_option('better-wp-db-dependents');
+            (new DependencyManager())->remove($this);
 
-            unset($dependent_plugins[$this->id]);
 
-            update_option('better-wp-db-dependents', $dependent_plugins);
-
-            return $dependent_plugins;
 
         }
 
         public function add() : void
         {
 
-            $dependents = get_option('better-wp-db-dependents');
-            $dependents[$this->id] = $this->vendorDropInPath();
+            (new DependencyManager())->add($this);
 
-            update_option('better-wp-db-dependents', $dependents);
 
         }
+
+        public function getId() : string
+        {
+
+            return $this->id;
+        }
+
 
     }

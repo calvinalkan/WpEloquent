@@ -16,8 +16,6 @@
 
         private $db_drop_in;
 
-        private $target_link;
-
         private $stub_dir;
 
         /**
@@ -42,11 +40,9 @@
 
             }
 
-            $this->target_link = getenv('PACKAGE_ROOT').'/src/ExtendsWpdb/drop-in.php';
-
             $this->stub_dir = getenv('PACKAGE_ROOT').'/tests/Stubs';
 
-            $this->createTestSymlinks();
+            $this->createTestPluginDirectory();
 
             $this->pluginA = new Symlinker('plugin-a/vendor');
             $this->pluginB = new Symlinker('plugin-b/vendor');
@@ -70,34 +66,32 @@
             self::assertFalse(is_link($this->db_drop_in));
             self::assertFalse(file_exists($this->db_drop_in));
 
-            $this->deleteTestSymlinks();
+            $this->deleteTestPluginDirectory();
 
 
         }
 
 
-        /** @test */
+        // /** @test */
         public function a_symlink_gets_created_when_a_dependent_plugin_gets_activated_and_no_previous_db_drop_in_exists()
         {
 
-            self::assertFalse(is_link($this->db_drop_in));
-            self::assertFalse(file_exists($this->db_drop_in));
+            $this->assertSymlinkNotSet();
 
-            $this->activatePluginA();
+            $this->activate($this->pluginA);
 
-            $this->assertSymlinkSet('plugin-a/vendor');
+            $this->assertSymlinkFor($this->pluginA);
 
 
         }
 
-        /** @test */
+        // /** @test */
         public function if_a_symlink_is_created_successfully_an_option_is_stored_in_the_db()
         {
 
-            self::assertFalse(is_link($this->db_drop_in));
-            self::assertFalse(file_exists($this->db_drop_in));
+            self::assertSame(false, get_option('better-wp-db-symlink-created'));
 
-            $this->activatePluginA();
+            $this->activate($this->pluginA);
 
             self::assertSame(true, get_option('better-wp-db-symlink-created'));
 
@@ -117,7 +111,7 @@
 
             try {
 
-                $this->activatePluginA();
+                $this->activate($this->pluginA);
                 $this->fail('No Exception was thrown when one was expected');
             }
 
@@ -133,28 +127,27 @@
 
         }
 
-        /** @test */
+        // /** @test */
         public function the_symlinker_wont_run_if_the_installed_option_is_set_in_the_db()
         {
 
             update_option('better-wp-db-symlink-created', true);
 
-            $this->activatePluginA();
+            $this->activate($this->pluginA);
 
-            self::assertFalse(is_link($this->db_drop_in));
-            self::assertFalse(file_exists($this->db_drop_in));
+            $this->assertSymlinkNotSet();
 
 
         }
 
-        /** @test */
+        // /** @test */
         public function a_new_dependent_is_always_added_no_matter_what()
         {
 
             update_option('better-wp-db-symlink-created', true);
 
-            $this->activatePluginA();
-            $this->activatePluginB();
+            $this->activate($this->pluginA);
+            $this->activate($this->pluginB);
 
             $dependents = get_option('better-wp-db-dependents');
 
@@ -164,60 +157,65 @@
 
         }
 
-
-        /** @test */
+        // /** @test */
         public function symlink_and_db_option_get_deleted_when_the_destroy_method_gets_called()
         {
 
-            $this->activatePluginA();
+            $this->activate($this->pluginA);
 
-            $this->assertSymlinkSet('plugin-a/vendor');
+            $this->assertSymlinkFor($this->pluginA);
 
-            $this->deactivatePluginA();
+            $this->deactivate($this->pluginA);
 
             $this->assertSymlinkNotSet();
 
-            self::assertFalse(get_option('better-wp-db-symlink-created'));
+            $this->assertFalse(get_option('better-wp-db-symlink-created'));
 
         }
 
-
-        /** @test */
+        // /** @test */
         public function if_no_dependent_is_active_anymore_symlink_and_db_settings_are_removed()
         {
 
-            $this->activatePluginA();
-            $this->activatePluginB();
+            $this->activate($this->pluginA);
+            $this->activate($this->pluginB);
 
-            $this->deactivatePluginA();
-            $this->deactivatePluginB();
+            $this->deactivate($this->pluginA);
+            $this->deactivate($this->pluginB);
 
             $this->assertSymlinkNotSet();
-            self::assertFalse(get_option('better-wp-db-symlink-created'));
+            $this->assertFalse(get_option('better-wp-db-symlink-created'));
 
         }
 
-        /** @test */
-        public function the_symlink_gets_changed_to_another_plugins_vendor_folder_when_a_plugin_gets_deactivated()
+        // /** @test */
+        public function the_symlink_gets_changed_to_the_next_plugins_vendor_folder_when_a_plugin_gets_deactivated()
         {
 
 
-            $this->activatePluginA();
-            $this->activatePluginB();
+            $this->activate($this->pluginA);
+            $this->activate($this->pluginB);
 
-            $this->assertSymlinkSet('plugin-a/vendor');
+            $this->assertSymlinkFor($this->pluginA);
             $this->assertTrue(get_option('better-wp-db-symlink-created'));
 
-            $this->deactivatePluginA();
+            $this->deactivate($this->pluginA);
 
-            $this->assertSymlinkSet('plugin-b/vendor');
+            $this->assertSymlinkFor($this->pluginB);
             $this->assertTrue(get_option('better-wp-db-symlink-created'));
 
 
         }
 
 
-        private function assertSymlinkSet($plugin_vendor_path = null)
+
+
+
+
+
+
+
+        private function assertSymlinkFor(Symlinker $symlinker)
         {
 
             self::assertTrue(file_exists($this->db_drop_in),
@@ -225,11 +223,8 @@
             self::assertTrue(is_link($this->db_drop_in),
                 'The file: '.$this->db_drop_in.' is not a symlink.');
 
-            $symlink = $plugin_vendor_path
-                ? $this->stub_dir.DIRECTORY_SEPARATOR.$plugin_vendor_path.'/calvinalkan/wp-eloquent/src/ExtendsWpDb/drop-in.php'
-                : $this->target_link;
-
-            self::assertSame($symlink, readlink($this->db_drop_in));
+            self::assertSame($symlinker->dependent()
+                                       ->vendorDropInPath(), readlink($this->db_drop_in));
 
 
         }
@@ -242,35 +237,20 @@
 
         }
 
-        private function activatePluginA()
-        {
+        private function activate ( Symlinker $symlinker ) {
 
-            $this->pluginA->create();
-
-        }
-
-        private function activatePluginB()
-        {
-
-            $this->pluginB->create();
+            $symlinker->create();
 
         }
 
-        private function deactivatePluginA()
-        {
+        private function deactivate ( Symlinker $symlinker ) {
 
-            $this->pluginA->destroy();
-
-        }
-
-        private function deactivatePluginB()
-        {
-
-            $this->pluginB->destroy();
+            $symlinker->destroy();
 
         }
 
         private function activeUnsupportedPlugin()
+
         {
 
             $success = symlink(__FILE__, $this->db_drop_in);
@@ -286,7 +266,7 @@
 
         }
 
-        private function createTestSymlinks()
+        private function createTestPluginDirectory()
         {
 
             if ( ! is_link(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-a')) {
@@ -315,7 +295,7 @@
 
         }
 
-        private function deleteTestSymlinks()
+        private function deleteTestPluginDirectory()
         {
 
             $unlinkedA = unlink(WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.'plugin-a');
