@@ -5,8 +5,7 @@
 
     use Composer\Semver\Comparator;
     use Composer\Semver\Semver;
-    use Exception;
-    use Symfony\Component\Finder\Finder;
+
 
     class CompatibilityManager
     {
@@ -14,13 +13,16 @@
         /**
          * @var array
          */
-        private $plugins;
-
+        private $existing_plugins;
 
         /**
          * @var array
          */
         private $versions;
+
+
+        /** @var PluginFile */
+        private $plugin_file;
 
 
         /**
@@ -30,21 +32,20 @@
          * of the typeDependentPlugin.
          *
          *
-         * @param  array  $plugins
+         * @param  array  $existing_plugins
          */
-        public function __construct(array $plugins = [])
+        public function __construct(array $existing_plugins = [], PluginFile $plugin_file = null)
         {
 
-            $this->plugins = $plugins;
+            $this->existing_plugins = $existing_plugins;
+            $this->plugin_file = $plugin_file ?? new PluginFile();
             $this->versions = $this->parseVersions();
         }
 
         public function checkFor(DependentPlugin $plugin)
         {
 
-            $composer = $this->getComposerFile($plugin);
-
-            $version = $this->getRequiredVersion($composer);
+            $version = $this->getRequiredVersion($plugin);
 
             if ( ! count($this->versions)) {
 
@@ -57,63 +58,28 @@
 
         }
 
-        private function getComposerFile(DependentPlugin $plugin)
+        private function getRequiredVersion($plugin)
         {
 
-            $finder = new Finder();
 
-            $root_dir = dirname($plugin->vendorDir(), 1);
+            $composer_config = $this->plugin_file->getComposerPackages($plugin);
 
-            $finder
-                ->followLinks()
-                ->files()
-                ->in($root_dir)
-                ->depth('< 1')
-                ->name('composer.lock');
+            $packages = collect($composer_config['packages']);
 
-            try {
+            $version = collect(
+                $packages->firstWhere('name', 'calvinalkan/wp-eloquent')
+            )->only('version')->first();
 
-                $composer_json_path = iterator_to_array($finder, false)[0];
+            if ( ! $version) {
 
-                return $composer_json_path->getRealPath();
-
-            }
-            catch (\Throwable $e) {
-
-                throw new ConfigurationException('Unable to find a composer.lock file inside the directory: '.$root_dir);
+                throw new ConfigurationException(
+                    'A composer.lock file was found but the required version number could not be parsed.'
+                );
 
             }
 
+            return $version;
 
-        }
-
-        private function getRequiredVersion($path)
-        {
-
-            try {
-
-                $composer_config = json_decode(file_get_contents($path), true);
-
-                $packages = collect($composer_config['packages']);
-
-                $version = collect(
-                    $packages->firstWhere('name', 'calvinalkan/wp-eloquent')
-                )->only('version')->first();
-
-                if ( ! $version) {
-
-                    throw new \Exception;
-
-                }
-
-                return $version;
-
-            }
-            catch (Exception $e) {
-
-                throw new ConfigurationException('A composer.lock file was found but the required version number could not be parsed.');
-
-            }
 
         }
 
@@ -122,9 +88,9 @@
 
             $versions = array_map(function (DependentPlugin $plugin) {
 
-                return $this->getRequiredVersion($this->getComposerFile($plugin));
+                return $this->getRequiredVersion($plugin);
 
-            }, $this->plugins);
+            }, $this->existing_plugins);
 
             return Semver::sort($versions);
 
@@ -149,7 +115,7 @@
 
                 throw new CompatibilityException(
 
-                    'Your Plugin relies on version: ' . $version .'. The minimum version required in this WP-Install is ' . $minimum
+                    'Your Plugin relies on version: '.$version.'. The minimum version required in this WP-Install is '.$minimum
 
                 );
 
@@ -163,7 +129,7 @@
 
             $highest_used = end($this->versions);
 
-            $major = '^'. $highest_used;
+            $major = '^'.$highest_used;
 
             $compatible = Semver::satisfies($version, $major);
 
@@ -171,7 +137,7 @@
 
                 throw new CompatibilityException(
 
-                    'Your Plugin relies on version: ' . $version .'. The maximum version compatible with this WP-Install is ' . $highest_used
+                    'Your Plugin relies on version: '.$version.'. The maximum version compatible with this WP-Install is '.$highest_used
 
                 );
 

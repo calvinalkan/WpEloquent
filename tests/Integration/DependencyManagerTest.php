@@ -187,7 +187,7 @@
             self::assertTrue(is_link($this->db_drop_in),
                 'The file: '.$this->db_drop_in.' is not a symlink.');
 
-            self::assertSame((new DependentPlugin($plugin_id))->vendorDropInPath(), readlink($this->db_drop_in));
+            self::assertSame((new DependentPlugin($plugin_id))->dbDropInPath(), readlink($this->db_drop_in));
 
 
         }

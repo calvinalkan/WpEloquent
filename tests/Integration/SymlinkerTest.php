@@ -224,7 +224,7 @@
                 'The file: '.$this->db_drop_in.' is not a symlink.');
 
             self::assertSame($symlinker->dependent()
-                                       ->vendorDropInPath(), readlink($this->db_drop_in));
+                                       ->dbDropInPath(), readlink($this->db_drop_in));
 
 
         }

@@ -53,7 +53,7 @@
 
             if ( ! $this->symlinkExists() ) {
 
-                symlink( $this->dependent->vendorDropInPath() , $this->db_drop_in_path);
+                symlink( $this->dependent->dbDropInPath() , $this->db_drop_in_path);
 
             }
 

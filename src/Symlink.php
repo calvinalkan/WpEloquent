@@ -21,7 +21,7 @@
 
             if ( $this->exists() ) return;
 
-            symlink( $plugin->vendorDropInPath() , self::wp_content_drop_in_path );
+            symlink( $plugin->dbDropInPath() , self::wp_content_drop_in_path );
 
         }
 
@@ -32,19 +32,5 @@
 
         }
 
-        public function swap(DependentPlugin $plugin)
-        {
-
-            $this->removeFor($plugin);
-
-            return $this;
-
-        }
-
-        public function for(DependentPlugin $plugin) {
-
-            $this->createFor($plugin);
-
-        }
 
     }

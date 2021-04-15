@@ -20,30 +20,24 @@
 
         public const drop_in_file_name = 'drop-in.php';
 
-        public function __construct(string $id)
+        /**
+         * @var PluginFile
+         */
+        private $plugin_file;
+
+        public function __construct(string $id, PluginFile $plugin_file = null )
         {
 
             $this->id = $id;
             $this->vendor_folder = WP_CONTENT_DIR.DIRECTORY_SEPARATOR.'plugins'.DIRECTORY_SEPARATOR.$id;
-
+            $this->plugin_file = $plugin_file ?? new PluginFile();
 
         }
 
-        public function vendorDropInPath()
+        public function dbDropInPath()
         {
 
-            $finder = new Finder();
-
-            $finder->ignoreUnreadableDirs()
-                   ->files()
-                   ->followLinks()
-                   ->in($this->vendor_folder.'/calvinalkan/wp-eloquent/src/*')
-                   ->exclude('Traits')
-                   ->name(self::drop_in_file_name);
-
-            $drop_in_path = iterator_to_array($finder, false)[0];
-
-            return $drop_in_path->getRealPath();
+           return $this->plugin_file->dbDropInPath($this->id);
 
         }
 
