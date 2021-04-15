@@ -47,20 +47,10 @@
 
         }
 
-        public function remove()
+        public function vendorDir () : string
         {
 
-            (new DependencyManager())->remove($this);
-
-
-
-        }
-
-        public function add() : void
-        {
-
-            (new DependencyManager())->add($this);
-
+            return $this->vendor_folder;
 
         }
 

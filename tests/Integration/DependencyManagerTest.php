@@ -7,7 +7,6 @@
     use WpEloquent\DependencyManager;
     use WpEloquent\DependentPlugin;
 
-
     class DependencyManagerTest extends WPTestCase
     {
 
@@ -15,9 +14,10 @@
 
         private $stub_dir;
 
-        private $plugin_a;
+        private $plugin_a = 'plugin-a/vendor';
 
-        private $plugin_b;
+        private $plugin_b = 'plugin-b/vendor';
+
 
         private $dependency_manager;
 
@@ -40,8 +40,6 @@
 
             $this->createTestPluginDirectory();
 
-            $this->plugin_a = 'plugin-a/vendor';
-            $this->plugin_b = 'plugin-b/vendor';
             $this->dependency_manager = new DependencyManager();
 
         }
@@ -63,12 +61,12 @@
             $this->deleteTestPluginDirectory();
 
 
-
         }
 
 
         /** @test */
-        public function a_dependent_plugins_symlink_is_always_created_if_its_the_first_dependent_plugin() {
+        public function a_dependent_plugins_symlink_is_always_created_if_its_the_first_dependent_plugin()
+        {
 
 
             $this->assertSymlinkNotSet();
@@ -115,7 +113,7 @@
             try {
 
                 $this->dependency_manager->add($this->plugin_a);
-                $this->assertTrue(True);
+                $this->assertTrue(true);
 
             }
 
@@ -126,11 +124,11 @@
             }
 
 
-
         }
 
         /** @test */
-        public function a_db_entry_wont_be_duplicated () {
+        public function a_db_entry_wont_be_duplicated()
+        {
 
             $this->dependency_manager->add($this->plugin_a);
 
@@ -172,24 +170,16 @@
             $this->dependency_manager->remove($this->plugin_a);
             $this->dependency_manager->remove($this->plugin_b);
 
-
             $this->assertSymlinkNotSet();
             $this->assertFalse(get_option('better-wp-db-dependents'));
 
         }
 
-        /** @test */
-        public function an_exception_gets_thrown_when_the_composer_json_file_cant_be_parsed () {
 
 
 
 
-        }
-
-
-
-
-        private function assertSymlinkFor( $plugin_id )
+        private function assertSymlinkFor($plugin_id)
         {
 
             self::assertTrue(file_exists($this->db_drop_in),
@@ -197,7 +187,7 @@
             self::assertTrue(is_link($this->db_drop_in),
                 'The file: '.$this->db_drop_in.' is not a symlink.');
 
-            self::assertSame( ( new DependentPlugin($plugin_id) )->vendorDropInPath(), readlink($this->db_drop_in));
+            self::assertSame((new DependentPlugin($plugin_id))->vendorDropInPath(), readlink($this->db_drop_in));
 
 
         }
@@ -237,6 +227,8 @@
             }
 
 
+
+
         }
 
         private function deleteTestPluginDirectory()
@@ -250,24 +242,19 @@
 
         }
 
-        private function assertMarkedInstalled($plugin_id) {
+        private function assertMarkedInstalled($plugin_id)
+        {
 
             $this->assertContains($plugin_id, $this->dependency_manager->getAll());
 
         }
 
-        private function assertNotMarkedInstalled($plugin_id) {
+        private function assertNotMarkedInstalled($plugin_id)
+        {
 
             $this->assertNotContains($plugin_id, $this->dependency_manager->getAll());
 
         }
 
-        private function createFakeSymlink () {
-
-            $success = symlink(__FILE__, $this->db_drop_in);
-
-            self::assertTrue($success);
-
-        }
 
     }

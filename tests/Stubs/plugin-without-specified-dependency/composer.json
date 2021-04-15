@@ -1,0 +1,7 @@
+{
+  "name": "stub/plugin-without-dependency",
+  "description": "description",
+  "require": {
+
+  }
+}

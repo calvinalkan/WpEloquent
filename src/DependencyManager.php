@@ -11,17 +11,22 @@
          * @var array
          */
         private $dependents;
+        /**
+         * @var CompatibilityManager
+         */
+        private $compatibility_manager;
 
-        public function __construct()
+        public function __construct(CompatibilityManager $compatibility_manager = null )
         {
 
             $this->dependents = $this->getAll();
+
+            $this->compatibility_manager = $compatibility_manager ?? new CompatibilityManager($this->buildPlugins());
 
         }
 
         public function add($plugin_id)
         {
-
 
             if (is_int($this->index($plugin_id))) {
 
@@ -29,7 +34,11 @@
 
             }
 
-            $this->markInDatabase($plugin = new DependentPlugin($plugin_id));
+            $plugin = new DependentPlugin($plugin_id);
+
+            $this->compatibility_manager->checkFor($plugin);
+
+            $this->markInDatabase($plugin);
 
             $this->symlink($plugin);
 
@@ -135,6 +144,19 @@
             }
 
             return $this;
+
+        }
+
+        private function buildPlugins()
+        {
+
+            $plugins = array_map(function ($plugin_id) {
+
+               return new DependentPlugin($plugin_id);
+
+            }, $this->dependents);
+
+            return $plugins;
 
         }
 
