@@ -13,6 +13,7 @@
 
 	class DependencyManagerTest extends WPTestCase {
 
+		// Calvin s as
 
 		private $db_drop_in;
 
