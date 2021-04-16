@@ -1,7 +1,0 @@
-{
-  "name": "stub/plugin-a",
-  "description": "description",
-  "require": {
-    "calvinalkan/wp-eloquent": "0.2.*"
-  }
-}

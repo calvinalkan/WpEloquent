@@ -3,7 +3,6 @@
 
     namespace WpEloquent;
 
-    use Composer\Semver\Comparator;
     use Composer\Semver\Semver;
 
 
@@ -13,15 +12,15 @@
         /**
          * @var array
          */
-        private $existing_plugins;
-
-        /**
-         * @var array
-         */
         private $versions;
 
+	    /**
+	     * @var array
+	     */
+	    private $stored_plugins;
 
-        /**
+
+	    /**
          * CompatibilityManager constructor.
          *
          * Accepts an array very each element is
@@ -33,9 +32,8 @@
         public function __construct( array $existing_plugins = [] )
         {
 
-            $this->existing_plugins = $existing_plugins;
-            $this->versions = $this->parseVersions();
-            $this->version_storage = $this->versionStorage();
+            $this->versions       = $this->parseVersions($existing_plugins);
+            $this->stored_plugins = $this->parseStoredPlugins($existing_plugins);
 
         }
 
@@ -46,121 +44,73 @@
 	     * @throws CompatibilityException
 	     * @throws ConfigurationException
 	     */
-	    public function isCompatible( DependentPlugin $plugin) : bool {
+	    public function isCompatible( DependentPlugin $plugin ) : bool {
 
             $version = $plugin->requiredVersion();
 
-            if ( ! count($this->versions)) {
+            if ( ! count($this->stored_plugins)) {
 
-	            $this->version_storage[$version] = $plugin;
                 return true;
 
             }
 
-            $this->compareMinimum($version);
-            $this->compareMaximum($version);
+		    [$compatible, $minimum_version] = $this->compare($version);
 
-            $this->version_storage[$version] = $plugin;
+            if ( ! $compatible ) {
+
+            	throw new CompatibilityException( $version, $minimum_version );
+
+            }
 
             return true;
 
 
         }
 
-	    public function requiredVersions() : array
-	    {
+	    public function optimalVersionWith( DependentPlugin $plugin = null  ) : ?DependentPlugin {
 
-		    return $this->versions;
+	    	$merge = ($plugin) ?  [ $plugin->requiredVersion() =>  $plugin] : [];
 
-	    }
+	    	$versions = array_merge( $this->stored_plugins, $merge );
 
-	    public function newOptimalVersion() {
+	    	if ( count($versions)) {
 
-	    	if ( count($this->version_storage)) {
+			    $high_to_low = Semver::rsort(array_keys($versions));
 
-			    $high_to_low = Semver::rsort(array_keys($this->version_storage));
-
-			    return $this->version_storage[$high_to_low[0]];
+			    return $versions[$high_to_low[0]];
 
 		    }
+
+	    	return $plugin;
 
 	    }
 
 	    public function forget ( DependentPlugin $plugin ) {
 
-	    	if ( $key = array_search($plugin, $this->version_storage)) {
+	    	if ( $key = array_search($plugin, $this->stored_plugins)) {
 
-	    		unset($this->version_storage[$key]);
+	    		unset($this->stored_plugins[$key]);
 
 		    }
 
 	    }
 
-        private function parseVersions()
+        private function parseVersions( array $plugins )
         {
 
             $versions = array_map(function (DependentPlugin $plugin) {
 
                 return $plugin->requiredVersion();
 
-            }, $this->existing_plugins);
+            }, $plugins);
 
             return $this->sortLowToHigh($versions);
 
         }
 
-        private function sortLowToHigh (array $versions ) {
+	    private function parseStoredPlugins(array $plugins ) : array {
 
-	        return Semver::sort($versions);
-
-        }
-
-        private function compareMinimum($version)
-        {
-
-
-            $minimum = $this->versions[0];
-
-            $compatible = Comparator::greaterThanOrEqualTo($version, $minimum);
-
-            if ( ! $compatible) {
-
-                throw new CompatibilityException(
-
-                    'Your Plugin relies on version: '.$version.'. The minimum version required in this WP-Install is '.$minimum
-
-                );
-
-            }
-
-
-        }
-
-        private function compareMaximum($version)
-        {
-
-            $highest_used = end($this->versions);
-
-            $major = '^'.$highest_used;
-
-            $compatible = Semver::satisfies($version, $major);
-
-            if ( ! $compatible) {
-
-                throw new CompatibilityException(
-
-                    'Your Plugin relies on version: '.$version.'. The maximum version compatible with this WP-Install is '.$highest_used
-
-                );
-
-            }
-
-
-        }
-
-	    private function versionStorage() : array {
-
-        	$storage = collect($this->existing_plugins)->flatMap(function (DependentPlugin $plugin) {
+        	$storage = collect($plugins)->flatMap(function (DependentPlugin $plugin) {
 
         		return [ $plugin->requiredVersion() =>  $plugin];
 
@@ -170,6 +120,21 @@
 
 	    }
 
+	    private function sortLowToHigh (array $versions ) {
+
+		    return Semver::sort($versions);
+
+	    }
+
+	    private function compare (string $version) : array {
+
+		    $minimum_version = '^' . $this->versions[0];
+
+		    $compatible = Semver::satisfies($version, $minimum_version);
+
+		    return [$compatible, $minimum_version];
+
+	    }
 
 
     }

@@ -5,11 +5,13 @@
 
 	class DependencyManager {
 
+		public const option_name = 'better-wp-db-dependents';
 
 		/**
 		 * @var array
 		 */
 		private $dependents;
+
 		/**
 		 * @var CompatibilityManager
 		 */
@@ -17,9 +19,13 @@
 
 		public function __construct( CompatibilityManager $compatibility_manager = null ) {
 
-			$this->dependents = $this->all();
+			$this->dependents = $this->getFreshFromDatabase();
 
-			$this->compatibility_manager = $compatibility_manager ?? new CompatibilityManager( $this->buildPlugins() );
+			$this->compatibility_manager = $compatibility_manager ?? new CompatibilityManager(
+
+				array_values($this->dependents)
+
+				);
 
 		}
 
@@ -36,25 +42,32 @@
 			$this->compatibility_manager->isCompatible( $plugin );
 
 			$this->markInDatabase( $plugin );
-
-			$this->symlink( $this->compatibility_manager->newOptimalVersion() );
-
-
+			
+			$this->symlink( $this->compatibility_manager->optimalVersionWith($plugin) );
+			
 		}
 
-		public function all() {
+		public function getFreshFromDatabase() : array {
 
-			return get_option('better-wp-db-dependents', []);
+			$dependent_ids =  collect(get_option( 'better-wp-db-dependents', [] ));
+
+			return $dependent_ids->flatMap(function ($dependent_id) {
+
+				return [$dependent_id => new DependentPlugin($dependent_id)];
+
+			})->toArray();
 
 
 		}
 
 		public function remove( string $plugin_id ) {
 
-			if ( is_int( $index = $this->index( $plugin_id ) ) ) {
+			if ( isset( $this->dependents[ $plugin_id ] ) ) {
 
-				$this->removeDependent( $index )
-				     ->replaceWith( $this->compatibility_manager->newOptimalVersion() )
+				$plugin = $this->dependents[ $plugin_id ];
+
+				$this->removeDependent( $plugin )
+				     ->replaceWith( $this->compatibility_manager->optimalVersionWith(null) )
 				     ->refresh();
 
 			}
@@ -75,21 +88,21 @@
 
 		private function markInDatabase( DependentPlugin $plugin ) {
 
-			$this->dependents[] = $plugin->getId();
+			$this->dependents[$plugin->getId()] = $plugin->getId();
 
-			update_option( 'better-wp-db-dependents', $this->dependents );
+			// Only store the keys, not the in memory objects.
+			update_option( 'better-wp-db-dependents', array_keys($this->dependents) );
 
 		}
 
-		private function removeDependent( $index ) : DependencyManager {
+		private function removeDependent( DependentPlugin $plugin ) : DependencyManager {
 
-			$plugin = new DependentPlugin( $this->dependents[ $index ] );
 
-			unset( $this->dependents[ $index ] );
+			unset( $this->dependents[ $plugin->getId() ] );
 
 			( new Symlink() )->removeFor( $plugin );
 
-			$this->compatibility_manager->forget( $plugin );
+			$this->compatibility_manager->forget($plugin);
 
 			return $this;
 
@@ -97,11 +110,10 @@
 
 		private function refresh() {
 
-			$this->dependents = array_values( $this->dependents );
 
 			if ( count( $this->dependents ) ) {
 
-				update_option( 'better-wp-db-dependents', $this->dependents );
+				update_option( 'better-wp-db-dependents', array_keys($this->dependents));
 
 				return;
 			}
@@ -123,17 +135,6 @@
 
 		}
 
-		private function buildPlugins() {
-
-			$plugins = array_map( function ( $plugin_id ) {
-
-				return new DependentPlugin( $plugin_id );
-
-			}, $this->dependents );
-
-			return $plugins;
-
-		}
 
 		/**
 		 * @param $plugin_id

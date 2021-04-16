@@ -54,7 +54,7 @@
 			$finder->ignoreUnreadableDirs()
 			       ->files()
 			       ->followLinks()
-			       ->in( $folder . '/calvinalkan/wp-eloquent/src/*' )
+			       ->in( $folder . '/calvinalkan/better-wpdb/src/*' )
 			       ->exclude( 'Traits' )
 			       ->name( DependentPlugin::drop_in_file_name );
 
